@@ -1,0 +1,114 @@
+project:
+  name: research-digest
+  timezone: America/New_York
+  subject_prefix: "[Research Digest]"
+
+schedule:
+  cadence: weekdays
+  lookback_days_default: 2
+  max_catchup_days: 3
+
+source:
+  arxiv:
+    enabled: true
+    categories:
+      - cs.AI
+      - cs.LG
+      # Replace with your real categories
+    max_results_per_category: 150
+    sort_by: submittedDate
+    sort_order: descending
+
+topics:
+  - id: example_topic_1
+    name: Example Topic 1
+    description: Replace with your real interest area.
+    weight: 1.0
+    include_keywords:
+      - example phrase
+      - another phrase
+    exclude_keywords:
+      - unwanted phrase
+    preferred_categories:
+      - cs.AI
+    author_boost: []
+    author_suppress: []
+
+  - id: example_topic_2
+    name: Example Topic 2
+    description: Replace with your real interest area.
+    weight: 1.0
+    include_keywords:
+      - example keyword
+    exclude_keywords: []
+    preferred_categories:
+      - cs.LG
+    author_boost: []
+    author_suppress: []
+
+ranking:
+  rules_score_weight: 0.35
+  llm_relevance_weight: 0.40
+  llm_novelty_weight: 0.15
+  llm_practicality_weight: 0.10
+  min_confidence_to_include: 55
+  max_rule_candidates: 60
+  max_llm_candidates: 25
+  top_picks_count: 6
+  watchlist_count: 10
+
+llm:
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.1
+  max_output_tokens: 600
+  prompt_version: v1
+  monthly_budget_usd: 10.0
+  hard_stop_at_budget: true
+  pricing:
+    input_per_million_usd: 0.30
+    output_per_million_usd: 2.50
+
+enrichment:
+  extract_explicit_links: true
+  github:
+    enabled: true
+    require_explicit_github_link: true
+    fetch_stars: true
+    fetch_license: true
+    fetch_last_updated: true
+
+delivery:
+  channels:
+    - file
+    - email
+
+  file:
+    enabled: true
+    output_dir: outputs
+
+  email:
+    enabled: true
+    provider: smtp
+    from_address_env: DIGEST_FROM_ADDRESS
+    to_addresses_env: DIGEST_TO_ADDRESSES
+    subject_format: "{subject_prefix} {run_date} — {top_count} top picks"
+
+  smtp:
+    host_env: SMTP_HOST
+    port_env: SMTP_PORT
+    username_env: SMTP_USERNAME
+    password_env: SMTP_PASSWORD
+    use_tls: true
+
+state:
+  backend: sqlite
+  sqlite_path: state/research_digest.sqlite
+  persist_branch: bot-state
+
+ops:
+  send_empty_digest: false
+  rules_only_fallback_if_llm_fails: true
+  skip_duplicate_send_on_same_run_date: true
+  upload_run_artifacts: true
+  save_intermediate_json: true
