@@ -1,0 +1,39 @@
+version: 1
+
+sources:
+  arxiv:
+    enabled: true
+    categories:
+      - cs.AI
+      - cs.LG
+      - cs.CL
+    keyword_queries:
+      - agent
+      - tool use
+      - retrieval
+    lookback_days: 3
+    max_results_per_run: 100
+
+filters:
+  required_keywords: []
+  excluded_keywords:
+    - survey
+    - workshop
+  max_authors: null
+
+ranking:
+  prioritize_recency: true
+  prioritize_keyword_matches: true
+  max_candidates_for_digest: 15
+
+digest:
+  title: Research Digest
+  formats:
+    - markdown
+  include_abstract_excerpt: true
+  include_reason_selected: true
+  include_links: true
+
+summarization:
+  mode: extractive
+  provider: none
