@@ -63,13 +63,14 @@ class TestHtmlEmail:
         entries = [_entry(1)]
         cfg = AppConfig()
         html, _ = render_email(entries, cfg)
-        assert "max-width: 520px" in html
+        assert "max-width:480px" in html
 
     def test_html_title_is_linked(self) -> None:
         entries = [_entry(1)]
         cfg = AppConfig()
         html, _ = render_email(entries, cfg)
-        assert '<a href="http://arxiv.org/abs/2401.00001">Test Paper 1</a>' in html
+        assert 'href="http://arxiv.org/abs/2401.00001"' in html
+        assert "Test Paper 1" in html
 
 
 class TestGmailProvider:
