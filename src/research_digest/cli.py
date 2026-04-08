@@ -194,6 +194,7 @@ def _send_digest_standalone(cfg: AppConfig) -> None:
     """Send email for most recent run (loads from DB, uses extractive summaries)."""
     from research_digest.delivery.gmail import GmailProvider
     from research_digest.models import DigestEntry
+    from research_digest.pipeline.rank import _determine_topic_group
     from research_digest.pipeline.summarize import extractive_summary
     from research_digest.rendering.html_email import render_email
 
@@ -209,6 +210,7 @@ def _send_digest_standalone(cfg: AppConfig) -> None:
         DigestEntry(
             paper=sp.paper, score=sp.score, rank=sp.rank, reason=sp.reason,
             abstract_excerpt=extractive_summary(sp.paper.abstract),
+            topic_group=_determine_topic_group(sp.paper, cfg),
         )
         for sp in scored
     ]

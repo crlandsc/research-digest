@@ -5,6 +5,7 @@ from pathlib import Path
 
 from research_digest.config import AppConfig
 from research_digest.models import DigestEntry
+from research_digest.pipeline.rank import _determine_topic_group
 from research_digest.pipeline.summarize import extractive_summary
 from research_digest.rendering.markdown import render_digest, write_digest
 from research_digest.storage.repository import PaperRepository
@@ -34,6 +35,7 @@ def run_build(
     papers = [sp.paper for sp in scored]
     summaries = provider.summarize_papers(papers)
 
+    # Re-compute topic groups (not persisted in DB, so get_top_scored defaults to "Other")
     entries = [
         DigestEntry(
             paper=sp.paper,
@@ -42,7 +44,7 @@ def run_build(
             reason=sp.reason,
             abstract_excerpt=summaries.get(sp.paper.external_id)
             or extractive_summary(sp.paper.abstract),
-            topic_group=sp.topic_group,
+            topic_group=_determine_topic_group(sp.paper, config),
         )
         for sp in scored
     ]
