@@ -40,11 +40,11 @@ This file is the prioritized build backlog.
 - [x] Add sample local workflow docs (covered by README quickstart)
 
 ## Milestone 5 — optional enhancements
-- [ ] Add optional LLM summarization abstraction
-- [ ] Add provider-backed summarization implementation
-- [ ] Add optional email/slack delivery
-- [ ] Add optional scheduling
-- [ ] Add optional deployment path
+- [x] Add optional LLM summarization abstraction
+- [x] Add provider-backed summarization implementation (Gemini Flash)
+- [x] Add optional email delivery (Gmail SMTP)
+- [x] Add optional scheduling (GitHub Actions, weekdays 8am ET)
+- [x] Add optional deployment path (GitHub Actions workflow)
 - [ ] Design source adapters for future music/audio venues (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP)
 
 ## Prioritization rule

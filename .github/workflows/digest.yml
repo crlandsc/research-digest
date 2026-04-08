@@ -1,0 +1,64 @@
+name: Daily Research Digest
+
+on:
+  schedule:
+    # 8:00 AM ET weekdays (12:00 UTC during EDT, 13:00 UTC during EST)
+    # Using 12:00 UTC — will be 8am EDT (Mar-Nov) or 7am EST (Nov-Mar)
+    - cron: '0 12 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: 'Override lookback days (default: auto based on day of week)'
+        required: false
+        type: number
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Determine lookback days
+        id: lookback
+        run: |
+          if [ -n "${{ inputs.lookback_days }}" ]; then
+            echo "days=${{ inputs.lookback_days }}" >> $GITHUB_OUTPUT
+          else
+            # Monday (1) = 3 days (covers Sat+Sun+Mon morning)
+            # Tue-Fri = 1 day (covers since yesterday)
+            DOW=$(date -u +%u)
+            if [ "$DOW" = "1" ]; then
+              echo "days=3" >> $GITHUB_OUTPUT
+            else
+              echo "days=1" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Run digest pipeline with email
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          research-digest run \
+            --lookback-days ${{ steps.lookback.outputs.days }} \
+            --send-email \
+            --verbose
+
+      - name: Upload digest artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: digest-${{ github.run_id }}
+          path: output/
+          retention-days: 30

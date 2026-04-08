@@ -1,37 +1,36 @@
 # Current State
 
 ## Current milestone
-Milestone 3 — complete. Local MVP is functional.
+Milestone 5 — mostly complete. LLM summarization, email, and scheduling done.
 
 ## Completed
 - M0: documentation scaffold
-- M1: project scaffold (pyproject.toml, config loading, CLI entrypoint, tests)
-- M2: ingest and persistence (arXiv fetcher, SQLite storage, pipeline fetch, tests)
-- M3: ranking and digest generation (scoring, filters, Markdown renderer, full pipeline, tests)
-- 78 tests all passing
-- Decisions D-012 through D-021 recorded
+- M1: project scaffold (pyproject.toml, config, CLI, README quickstart)
+- M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
+- M3: ranking and digest generation (scoring, filters, Markdown renderer)
+- M4: usability hardening (CLI ergonomics, status command, 17 edge case tests)
+- M5: LLM summarization (Gemini Flash provider with abstraction)
+- M5: email delivery (Gmail SMTP with HTML renderer)
+- M5: scheduling (GitHub Actions weekday cron, smart lookback)
+- 110 tests all passing
 
 ## Working commands
-- `research-digest fetch` — fetch papers from arXiv into SQLite
-- `research-digest rank` — score and rank stored papers
-- `research-digest build` — generate Markdown digest from ranked papers
 - `research-digest run` — full pipeline (fetch + rank + build)
-- `research-digest fetch --dry-run` — preview query without fetching
-- `research-digest run --since-last-run` — fetch only new papers since last run
+- `research-digest run --send-email` — run + email delivery
+- `research-digest run --since-last-run` — fetch only new papers
+- `research-digest send` — send most recent digest via email
+- `research-digest status` — show DB stats and last run
+- `research-digest fetch --dry-run` — preview query
 
-## Next steps
-1. Begin M4 (usability hardening) if desired
-2. Optional: LLM summarization, scheduling, delivery (M5)
+## Automated delivery
+- GitHub Actions: `.github/workflows/digest.yml`
+- Schedule: weekdays 12:00 UTC (8am EDT)
+- Monday: 3-day lookback (covers weekend)
+- Tue-Fri: 1-day lookback
+- Secrets required: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
 
-## Manual steps status
-- MS-001 (.env): not needed yet
-- MS-002 (topics.yaml): complete (2026-04-08) — 28 keywords, 8 categories, music/audio AI/ML focus
-- MS-003–MS-005: deferred
-
-## Open decisions
-- No critical open decisions
-- LLM provider choice deferred to M5
-- Delivery channel deferred to M5
+## Remaining
+- [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
 2026-04-08
