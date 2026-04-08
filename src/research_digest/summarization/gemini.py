@@ -11,7 +11,7 @@ from research_digest.summarization.base import SummarizationProvider
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
 
 _SYSTEM_PROMPT = """\
 You write concise research paper summaries for a daily email digest read by \

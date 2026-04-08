@@ -17,15 +17,19 @@ def run_build(
     config: AppConfig,
     repo: PaperRepository,
     run_id: str,
-) -> Path | None:
-    """Build a Markdown digest from the top-scored papers for a run."""
+) -> tuple[Path | None, list[DigestEntry]]:
+    """Build a Markdown digest from the top-scored papers for a run.
+
+    Returns (digest_path, entries) so callers can reuse entries for email
+    without re-calling the LLM.
+    """
     limit = config.ranking.max_candidates_for_digest
     scored = repo.get_top_scored(run_id, limit)
 
     if not scored:
         logger.warning("No scored papers found for run %s", run_id)
 
-    # Generate summaries via configured provider
+    # Generate summaries via configured provider (only called once here)
     provider = get_provider(config)
     papers = [sp.paper for sp in scored]
     summaries = provider.summarize_papers(papers)
@@ -55,35 +59,4 @@ def run_build(
     repo.mark_digest_included(run_id, paper_ids)
 
     logger.info("Built digest with %d entries at %s", len(entries), path)
-    return path
-
-
-def _load_entries_from_last_run(config: AppConfig) -> list[DigestEntry]:
-    """Load digest entries from the most recent successful run (for email rendering)."""
-    from research_digest.storage.db import get_connection
-
-    conn = get_connection()
-    repo = PaperRepository(conn)
-
-    last = repo.get_last_successful_run()
-    if not last:
-        return []
-
-    limit = config.ranking.max_candidates_for_digest
-    scored = repo.get_top_scored(last.run_id, limit)
-
-    provider = get_provider(config)
-    papers = [sp.paper for sp in scored]
-    summaries = provider.summarize_papers(papers)
-
-    return [
-        DigestEntry(
-            paper=sp.paper,
-            score=sp.score,
-            rank=sp.rank,
-            reason=sp.reason,
-            abstract_excerpt=summaries.get(sp.paper.external_id)
-            or extractive_summary(sp.paper.abstract),
-        )
-        for sp in scored
-    ]
+    return (path, entries)

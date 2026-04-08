@@ -6,6 +6,9 @@ from typing import Annotated
 from uuid import uuid4
 
 import typer
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env file if present
 
 from research_digest import __version__
 from research_digest.config import AppConfig, load_config
@@ -129,7 +132,7 @@ def build(
             raise typer.Exit(1)
         run_id = last.run_id
 
-    path = run_build(cfg, repo, run_id)
+    path, _entries = run_build(cfg, repo, run_id)
     if path:
         typer.echo(f"Digest written to {path}")
     else:
@@ -152,11 +155,11 @@ def run(
     cfg = load_config(config)
 
     try:
-        path = run_pipeline(cfg, since_last_run, lookback_days, dry_run)
+        path, entries = run_pipeline(cfg, since_last_run, lookback_days, dry_run)
         if path:
             typer.echo(f"Digest written to {path}")
             if send_email:
-                _send_digest(cfg, path)
+                _send_digest_from_entries(cfg, path, entries)
         elif dry_run:
             typer.echo("Dry run complete.")
     except Exception as e:
@@ -167,42 +170,52 @@ def run(
 @app.command()
 def send(
     config: Annotated[Path | None, typer.Option("--config", help="Path to topics config YAML.")] = None,
-    digest_path: Annotated[Path | None, typer.Option("--digest", help="Path to digest .md file to send.")] = None,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Send the most recent digest via email."""
     setup_logging("DEBUG" if verbose else "WARNING")
     cfg = load_config(config)
-
-    if digest_path is None:
-        conn = get_connection()
-        repo = PaperRepository(conn)
-        last = repo.get_last_successful_run()
-        if last and last.digest_path:
-            digest_path = Path(last.digest_path)
-        else:
-            typer.echo("No digest found. Run 'research-digest run' first.", err=True)
-            raise typer.Exit(1)
-
-    if not digest_path.exists():
-        typer.echo(f"Digest file not found: {digest_path}", err=True)
-        raise typer.Exit(1)
-
-    _send_digest(cfg, digest_path)
+    _send_digest_standalone(cfg)
 
 
-def _send_digest(cfg: AppConfig, digest_path: Path) -> None:
-    """Build email from digest entries and send."""
+def _send_digest_from_entries(cfg: AppConfig, digest_path: Path, entries: list) -> None:
+    """Send email using already-built entries (no re-calling LLM)."""
     from research_digest.delivery.gmail import GmailProvider
-    from research_digest.models import DigestEntry
-    from research_digest.pipeline.build_digest import _load_entries_from_last_run
     from research_digest.rendering.html_email import render_email
 
-    entries = _load_entries_from_last_run(cfg)
     html, text = render_email(entries, cfg)
-
     provider = GmailProvider()
     subject = f"{cfg.digest.title} — {digest_path.parent.name}"
+    provider.send(subject, html, text)
+    typer.echo(f"Email sent to {provider.to_addr}")
+
+
+def _send_digest_standalone(cfg: AppConfig) -> None:
+    """Send email for most recent run (loads from DB, uses extractive summaries)."""
+    from research_digest.delivery.gmail import GmailProvider
+    from research_digest.models import DigestEntry
+    from research_digest.pipeline.summarize import extractive_summary
+    from research_digest.rendering.html_email import render_email
+
+    conn = get_connection()
+    repo = PaperRepository(conn)
+    last = repo.get_last_successful_run()
+    if not last:
+        typer.echo("No successful run found.", err=True)
+        raise typer.Exit(1)
+
+    scored = repo.get_top_scored(last.run_id, cfg.ranking.max_candidates_for_digest)
+    entries = [
+        DigestEntry(
+            paper=sp.paper, score=sp.score, rank=sp.rank, reason=sp.reason,
+            abstract_excerpt=extractive_summary(sp.paper.abstract),
+        )
+        for sp in scored
+    ]
+
+    html, text = render_email(entries, cfg)
+    provider = GmailProvider()
+    subject = f"{cfg.digest.title} — {last.digest_path.split('/')[-2] if last.digest_path else 'digest'}"
     provider.send(subject, html, text)
     typer.echo(f"Email sent to {provider.to_addr}")
 

@@ -5,6 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from research_digest.config import AppConfig
+from research_digest.models import DigestEntry
 from research_digest.pipeline.build_digest import run_build
 from research_digest.pipeline.fetch import run_fetch
 from research_digest.pipeline.rank import run_rank
@@ -19,8 +20,11 @@ def run_pipeline(
     since_last_run: bool = False,
     lookback_days_override: int | None = None,
     dry_run: bool = False,
-) -> Path | None:
-    """Execute the full pipeline: fetch, rank, build digest."""
+) -> tuple[Path | None, list[DigestEntry]]:
+    """Execute the full pipeline: fetch, rank, build digest.
+
+    Returns (digest_path, entries) so callers can reuse entries for email.
+    """
     conn = get_connection()
     repo = PaperRepository(conn)
     run_id = str(uuid4())
@@ -32,13 +36,13 @@ def run_pipeline(
         start, end = compute_date_range(lb)
         query = build_query(config.sources.arxiv, start, end)
         logger.info("Dry run — query: %s", query)
-        return None
+        return (None, [])
 
     repo.create_run(run_id)
     try:
         total, new = run_fetch(config, repo, run_id, since_last_run, lookback_days_override)
         scored = run_rank(config, repo, run_id)
-        digest_path = run_build(config, repo, run_id)
+        digest_path, entries = run_build(config, repo, run_id)
 
         repo.complete_run(
             run_id,
@@ -48,7 +52,7 @@ def run_pipeline(
             papers_ranked=len(scored),
             digest_path=str(digest_path) if digest_path else None,
         )
-        return digest_path
+        return (digest_path, entries)
 
     except Exception:
         repo.complete_run(run_id, status="failed")
