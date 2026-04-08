@@ -23,71 +23,110 @@ Claude Code should:
 
 When Claude gets blocked on something only a human can do, it should use the `ACTION REQUIRED` format defined in `CLAUDE.md` and `docs/MANUAL_STEPS.md`.
 
-## Current status
+## Quickstart
 
-This is the documentation-first base repo.
+### Prerequisites
 
-The implementation scaffold and application code are expected to be created by Claude Code after reading these docs.
+- Python 3.12+
+- [pyenv](https://github.com/pyenv/pyenv) recommended (with pyenv-virtualenv)
+
+### Setup
+
+```bash
+# Clone and enter the repo
+cd research-digest
+
+# Create a virtualenv (pyenv example)
+pyenv virtualenv 3.12.12 research-digest
+pyenv local research-digest
+
+# Install in editable mode with dev dependencies
+pip install -e ".[dev]"
+```
+
+### Configure topics
+
+```bash
+# Copy the example and edit to your interests
+cp config/topics.example.yaml config/topics.yaml
+# Edit config/topics.yaml — set categories, keywords, filters
+```
+
+Or just run with the example config (music/audio AI/ML defaults).
+
+### Run
+
+```bash
+# Full pipeline: fetch from arXiv, rank, generate digest
+research-digest run
+
+# Preview the query without fetching
+research-digest fetch --dry-run
+
+# Fetch only new papers since the last successful run
+research-digest run --since-last-run
+
+# Override lookback window
+research-digest run --lookback-days 14
+
+# Run individual steps
+research-digest fetch
+research-digest rank
+research-digest build
+```
+
+Output is written to `output/<YYYY-MM-DD>/digest.md`.
+
+### Run tests
+
+```bash
+pytest
+```
+
+## How it works
+
+1. **Fetch** — queries arXiv's Atom/XML API with your configured categories and keywords
+2. **Store** — persists paper metadata in a local SQLite database (`data/research_digest.db`)
+3. **Rank** — scores papers using a deterministic point system (category match, keyword match, recency)
+4. **Build** — generates a Markdown digest with ranked papers, excerpts, and selection reasons
+
+No LLM or external API keys required for the base pipeline.
 
 ## Repository layout
 
-- `README.md` — human-facing project overview
-- `CLAUDE.md` — operating instructions for Claude Code
-- `env.example` — example environment variables; never commit real secrets
-- `config/topics.example.yaml` — example topic/filter configuration
-- `docs/PRODUCT_SPEC.md` — product goals, MVP scope, non-goals
-- `docs/ARCHITECTURE.md` — preferred technical direction and target structure
-- `docs/DECISIONS.md` — decision log
-- `docs/TASKS.md` — prioritized implementation backlog
-- `docs/STATE.md` — current status and next action
-- `docs/MANUAL_STEPS.md` — human-only setup tasks and escalation protocol
+```
+src/research_digest/
+  cli.py              — Typer CLI (fetch, rank, build, run)
+  config.py           — YAML + env var config loading
+  models.py           — Pydantic data models (Paper, ScoredPaper, etc.)
+  fetchers/arxiv.py   — arXiv API client and XML parser
+  storage/db.py       — SQLite schema and connection management
+  storage/repository.py — data access layer
+  pipeline/fetch.py   — fetch orchestration
+  pipeline/rank.py    — filtering and scoring
+  pipeline/build_digest.py — digest assembly
+  pipeline/summarize.py — extractive summarization
+  rendering/markdown.py — Jinja2 Markdown renderer
+tests/                — pytest suite (78 tests)
+config/               — topic configuration (YAML)
+output/               — generated digests
+data/                 — SQLite database (gitignored)
+docs/                 — project documentation
+```
 
-## Project goals
+## Configuration
 
-The project should eventually let a user:
-- define research interests and filters
-- fetch recent papers from arXiv
-- score or rank those papers
-- produce a readable digest
-- optionally enhance summaries with an LLM
-- optionally deliver the digest through email or another channel later
+Edit `config/topics.yaml` to set:
+- **categories** — arXiv category codes (e.g., `cs.SD`, `eess.AS`)
+- **keyword_queries** — search phrases combined with categories via AND
+- **excluded_keywords** — papers matching these are filtered out
+- **lookback_days** — how far back to fetch (default: 7)
+- **max_candidates_for_digest** — max papers in the digest (default: 20)
 
-## MVP boundaries
-
-For the first useful version:
-- source: arXiv only
-- output: local Markdown files
-- runtime: local CLI
-- persistence: local SQLite
-- summarization: extractive/by-abstract is acceptable
-- LLM enhancement: optional, not required for the first working version
+See `config/topics.example.yaml` for a full annotated example.
 
 ## Future source expansion
 
-The MVP intentionally stays arXiv-only.
-
-If the project later expands with a music/audio AI/ML focus, the preferred next sources are expected to include:
-- ISMIR conference proceedings
-- TISMIR
-- DCASE workshop and challenge outputs
-- MIREX evaluation results
-- ICASSP proceedings
-- IEEE/ACM TASLP
+The tool is currently arXiv-only. Planned future sources for music/audio AI/ML:
+- ISMIR, TISMIR, DCASE, MIREX, ICASSP, IEEE/ACM TASLP
 - Semantic Scholar metadata enrichment
-
-These future sources should be added only after the arXiv-only local pipeline works end-to-end.
-
-## Human quickstart
-
-1. Paste these files into the repo.
-2. Review `docs/PRODUCT_SPEC.md` and `docs/ARCHITECTURE.md`.
-3. If you strongly disagree with a core choice, edit the docs now before handing off to Claude.
-4. Optionally customize `config/topics.example.yaml` later; this is not required before the first Claude run.
-5. Open the repo in Claude Code.
-6. Give Claude the kickoff prompt included below in the handoff instructions.
-
-## Notes
-
-- Do not create API keys yet unless Claude specifically asks for one.
-- Do not over-configure hosting, email, or automation before the local MVP exists.
-- If the repo is not actually named `research-digest`, that is cosmetic; the docs still work.

@@ -15,7 +15,7 @@ This file is the prioritized build backlog.
 - [x] Add testing scaffold
 - [x] Add basic CLI entrypoint
 - [x] Add config loading from YAML and env vars
-- [ ] Add README quickstart for local runs
+- [x] Add README quickstart for local runs
 
 ## Milestone 2 — ingest and persistence
 - [x] Implement arXiv fetcher
