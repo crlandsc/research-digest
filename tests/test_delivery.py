@@ -63,7 +63,7 @@ class TestHtmlEmail:
         entries = [_entry(1)]
         cfg = AppConfig()
         html, _ = render_email(entries, cfg)
-        assert "max-width:480px" in html
+        assert "max-width:560px" in html
 
     def test_html_title_is_linked(self) -> None:
         entries = [_entry(1)]

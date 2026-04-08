@@ -19,20 +19,20 @@ _EMAIL_TEMPLATE = Template(
 <body style="margin:0; padding:0; background-color:#f9f9f9;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9f9f9;">
 <tr><td align="center" style="padding:24px 12px;">
-<table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; background-color:#ffffff; border-radius:8px;">
-<tr><td style="padding:28px 24px;">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px; width:100%; background-color:#ffffff; border-radius:8px;">
+<tr><td style="padding:32px 28px;">
 
 <!-- Header -->
-<h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:20px; font-weight:700; color:#111; margin:0 0 4px 0;">{{ title }}</h1>
-<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:12px; color:#999; margin:0 0 24px 0;">{{ generated_at }} &middot; {{ entries | length }} paper{{ 's' if entries | length != 1 }}</p>
+<h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:24px; font-weight:700; color:#111; margin:0 0 4px 0;">{{ title }}</h1>
+<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:14px; color:#999; margin:0 0 28px 0;">{{ generated_at }} &middot; {{ entries | length }} paper{{ 's' if entries | length != 1 }}</p>
 
 {% for entry in entries %}
 <!-- Paper -->
-<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:15px; font-weight:700; line-height:1.3; margin:0 0 8px 0;">
+<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:19px; font-weight:700; line-height:1.3; margin:0 0 10px 0;">
   <a href="{{ entry.paper.canonical_url }}" style="color:#111; text-decoration:underline;">{{ entry.paper.title }}</a>
 </p>
-<p style="font-family:Georgia,'Times New Roman',serif; font-size:14px; color:#333; line-height:1.55; margin:0 0 8px 0;">{{ entry.abstract_excerpt or '' }}</p>
-<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:11px; color:#999; margin:0 0 24px 0;">
+<p style="font-family:Georgia,'Times New Roman',serif; font-size:17px; color:#333; line-height:1.6; margin:0 0 10px 0;">{{ entry.abstract_excerpt or '' }}</p>
+<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:13px; color:#999; margin:0 0 28px 0;">
   <a href="{{ entry.paper.canonical_url }}" style="color:#2563eb; text-decoration:none;">Abstract</a>
   {% if entry.paper.pdf_url %}&nbsp;&middot;&nbsp;<a href="{{ entry.paper.pdf_url }}" style="color:#2563eb; text-decoration:none;">PDF</a>{% endif %}
   &nbsp;&middot;&nbsp;{{ entry.paper.categories | join(', ') }}
