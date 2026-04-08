@@ -89,7 +89,7 @@ def fetch_papers(
 
     with httpx.Client(
         headers={"User-Agent": USER_AGENT},
-        timeout=30.0,
+        timeout=60.0,
     ) as client:
         while start < max_to_fetch:
             params = {
@@ -123,14 +123,15 @@ def fetch_papers(
 def _request_with_retry(
     client: httpx.Client,
     params: dict[str, str],
-    max_retries: int = 1,
+    max_retries: int = 2,
 ) -> httpx.Response:
-    """Make request with single retry on 503."""
+    """Make request with retry on 429/503."""
     for attempt in range(max_retries + 1):
         response = client.get(ARXIV_API_URL, params=params)
-        if response.status_code == 503 and attempt < max_retries:
-            logger.warning("arXiv returned 503, retrying in 10s...")
-            time.sleep(10)
+        if response.status_code in (429, 503) and attempt < max_retries:
+            wait = int(response.headers.get("Retry-After", 10))
+            logger.warning("arXiv returned %d, retrying in %ds...", response.status_code, wait)
+            time.sleep(wait)
             continue
         response.raise_for_status()
         return response
