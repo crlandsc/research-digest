@@ -207,22 +207,30 @@ The system should fail clearly and helpfully when:
 
 ## Testing expectations
 
-Tests should cover at least:
-- config loading
-- paper normalization
-- ranking logic
-- digest rendering
+Every code change must include corresponding tests. Tests are the primary safeguard against regressions.
 
-Where practical, core ranking and rendering tests should avoid live network dependence.
+**Test categories:**
+- **Unit tests** — config loading, XML parsing, scoring, rendering (per-function)
+- **Edge case tests** — unicode, missing fields, empty inputs, special characters
+- **Integration tests** — full pipeline data flow (fetch → rank → build), verifying data survives DB roundtrips and pipeline stage boundaries
+- **Summarization/delivery tests** — provider abstraction, mocked API calls, email rendering
 
-## Deployment posture
+**Rules:**
+- All tests must be offline — no network, no API keys, no external services
+- Use in-memory SQLite (`:memory:`), hardcoded XML fixtures, mocked HTTP calls
+- Integration tests are the most critical — unit tests can pass while data is silently lost between stages
+- Bug fixes must include a regression test that would have caught the bug
+- CI runs all tests on every push to main (`.github/workflows/tests.yml`)
 
-Deployment is explicitly deferred until the local MVP works.
+**Current coverage:**
+- 115 tests across 8 test files
+- `pytest` runs in <1 second
 
-If deployment work begins later, it should be introduced after:
-1. local CLI works
-2. local digest generation works
-3. manual setup steps are documented
+## Deployment
+
+GitHub Actions handles deployment:
+- `.github/workflows/digest.yml` — daily digest delivery (weekday cron)
+- `.github/workflows/tests.yml` — CI tests on every push/PR to main
 
 ## External service posture
 

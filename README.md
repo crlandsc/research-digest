@@ -74,8 +74,10 @@ Output is written to `output/<YYYY-MM-DD>/digest.md`.
 ### Run tests
 
 ```bash
-pytest          # 112 tests
+pytest          # 115 tests
 ```
+
+Tests run automatically on every push to main via GitHub Actions CI. All tests are offline — no API keys or network access needed. Before pushing any changes, run `pytest` locally to verify nothing is broken.
 
 ## Optional: LLM summaries
 

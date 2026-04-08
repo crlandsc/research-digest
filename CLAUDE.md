@@ -107,6 +107,19 @@ When blocked by a human-only task, you must:
 [brief description of the next implementation step]
 ```
 
+## Testing discipline
+
+Tests are a critical guardrail for this project. CI runs all tests on every push to main.
+
+Rules:
+- Every code change must include corresponding test updates. New features need new tests. Bug fixes need regression tests that would have caught the bug.
+- Run `pytest` locally before committing. Do not push code that breaks tests.
+- Integration tests (test_pipeline_integration.py) are the most important — they exercise the full data flow and catch bugs where data is lost between pipeline stages.
+- Unit tests verify individual functions. Edge case tests (test_edge_cases.py) cover boundary conditions.
+- Tests must not require network access, API keys, or external services. Use fixtures, mocks, and in-memory SQLite.
+- When modifying data models or pipeline stages, verify that data flows correctly end-to-end, not just that individual functions return the right type.
+- CI workflow: `.github/workflows/tests.yml` runs on every push and PR to main.
+
 ## Git commit discipline
 
 - Commit incrementally: each logical unit of work gets its own commit.
