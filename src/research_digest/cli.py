@@ -1,5 +1,6 @@
 """CLI entrypoint for research-digest."""
 
+import logging
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
@@ -12,7 +13,11 @@ from research_digest.logging_config import setup_logging
 from research_digest.storage.db import get_connection
 from research_digest.storage.repository import PaperRepository
 
-app = typer.Typer(name="research-digest", help="Local-first research digest generator.")
+app = typer.Typer(
+    name="research-digest",
+    help="Local-first research digest generator.",
+    no_args_is_help=True,
+)
 
 
 def _version_callback(value: bool) -> None:
@@ -43,7 +48,7 @@ def fetch(
     from research_digest.fetchers.arxiv import build_query, compute_date_range
     from research_digest.pipeline.fetch import run_fetch
 
-    setup_logging("DEBUG" if verbose else None)
+    setup_logging("DEBUG" if verbose else "WARNING")
     cfg = load_config(config)
 
     if dry_run:
@@ -51,9 +56,10 @@ def fetch(
         lb = lookback_days or arxiv_cfg.lookback_days
         start, end = compute_date_range(lb)
         query = build_query(arxiv_cfg, start, end)
-        typer.echo(f"Config: {arxiv_cfg.categories} + {arxiv_cfg.keyword_queries}")
-        typer.echo(f"Query: {query}")
-        typer.echo(f"Date range: {start.isoformat()} to {end.isoformat()}")
+        typer.echo(f"Categories: {', '.join(arxiv_cfg.categories)}")
+        typer.echo(f"Keywords:   {len(arxiv_cfg.keyword_queries)} configured")
+        typer.echo(f"Date range: {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}")
+        typer.echo(f"Query:      {query}")
         return
 
     conn = get_connection()
@@ -64,10 +70,10 @@ def fetch(
     try:
         total, new = run_fetch(cfg, repo, rid, since_last_run, lookback_days)
         repo.complete_run(rid, status="completed", papers_fetched=total, papers_new=new)
-        typer.echo(f"Fetched {total} papers ({new} new) [run: {rid[:8]}]")
+        typer.echo(f"Fetched {total} papers ({new} new)")
     except Exception as e:
         repo.complete_run(rid, status="failed")
-        typer.echo(f"Fetch failed: {e}", err=True)
+        typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
 
 
@@ -80,7 +86,7 @@ def rank(
     """Score and rank stored papers."""
     from research_digest.pipeline.rank import run_rank
 
-    setup_logging("DEBUG" if verbose else None)
+    setup_logging("DEBUG" if verbose else "WARNING")
     cfg = load_config(config)
 
     conn = get_connection()
@@ -94,9 +100,11 @@ def rank(
         run_id = last.run_id
 
     scored = run_rank(cfg, repo, run_id)
-    typer.echo(f"Ranked {len(scored)} papers [run: {run_id[:8]}]")
+    typer.echo(f"Ranked {len(scored)} papers")
     for sp in scored[:5]:
-        typer.echo(f"  #{sp.rank} ({sp.score:.1f}) {sp.paper.title[:60]}")
+        typer.echo(f"  #{sp.rank} ({sp.score:.0f}) {sp.paper.title[:70]}")
+    if len(scored) > 5:
+        typer.echo(f"  ... and {len(scored) - 5} more")
 
 
 @app.command()
@@ -108,7 +116,7 @@ def build(
     """Build Markdown digest from ranked papers."""
     from research_digest.pipeline.build_digest import run_build
 
-    setup_logging("DEBUG" if verbose else None)
+    setup_logging("DEBUG" if verbose else "WARNING")
     cfg = load_config(config)
 
     conn = get_connection()
@@ -124,6 +132,8 @@ def build(
     path = run_build(cfg, repo, run_id)
     if path:
         typer.echo(f"Digest written to {path}")
+    else:
+        typer.echo("No papers to include in digest.")
 
 
 @app.command()
@@ -137,7 +147,7 @@ def run(
     """Run full pipeline: fetch, rank, build digest."""
     from research_digest.pipeline import run_pipeline
 
-    setup_logging("DEBUG" if verbose else None)
+    setup_logging("DEBUG" if verbose else "WARNING")
     cfg = load_config(config)
 
     try:
@@ -147,5 +157,32 @@ def run(
         elif dry_run:
             typer.echo("Dry run complete.")
     except Exception as e:
-        typer.echo(f"Pipeline failed: {e}", err=True)
+        typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
+
+
+@app.command()
+def status(
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
+) -> None:
+    """Show database and run status."""
+    setup_logging("DEBUG" if verbose else "WARNING")
+
+    conn = get_connection()
+    repo = PaperRepository(conn)
+
+    paper_count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
+    run_count = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+    completed = conn.execute("SELECT COUNT(*) FROM runs WHERE status='completed'").fetchone()[0]
+
+    typer.echo(f"Papers in database: {paper_count}")
+    typer.echo(f"Total runs: {run_count} ({completed} completed)")
+
+    last = repo.get_last_successful_run()
+    if last:
+        typer.echo(f"Last successful run: {last.completed_at.strftime('%Y-%m-%d %H:%M') if last.completed_at else 'unknown'}")
+        typer.echo(f"  Fetched: {last.papers_fetched} | New: {last.papers_new} | Ranked: {last.papers_ranked}")
+        if last.digest_path:
+            typer.echo(f"  Digest: {last.digest_path}")
+    else:
+        typer.echo("No successful runs yet.")

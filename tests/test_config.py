@@ -61,16 +61,19 @@ def test_resolve_config_path_env_var(
     assert resolved == tmp_config_file
 
 
-def test_resolve_config_path_fallback_to_example(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Remove env var if set, ensure we're in repo root where topics.example.yaml exists
+def test_resolve_config_path_fallback_to_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("TOPICS_CONFIG_PATH", raising=False)
-    # This test relies on running from repo root where config/topics.example.yaml exists
+    # Relies on running from repo root where config/ exists
+    topics = Path("config/topics.yaml")
     example = Path("config/topics.example.yaml")
-    if example.exists():
+    if topics.exists():
+        resolved = resolve_config_path()
+        assert resolved == topics  # topics.yaml takes priority over example
+    elif example.exists():
         resolved = resolve_config_path()
         assert resolved == example
     else:
-        pytest.skip("config/topics.example.yaml not found (not running from repo root)")
+        pytest.skip("no config files found (not running from repo root)")
 
 
 def test_resolve_config_path_missing_explicit(tmp_path: Path) -> None:
