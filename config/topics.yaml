@@ -1,0 +1,77 @@
+version: 1
+
+sources:
+  arxiv:
+    enabled: true
+    categories:
+      - cs.SD       # Sound
+      - eess.AS     # Audio and Speech Processing
+      - cs.MM       # Multimedia
+      - cs.LG       # Machine Learning
+      - cs.AI       # Artificial Intelligence
+      - cs.IR       # Information Retrieval
+      - cs.CL       # Computation and Language
+      - eess.SP     # Signal Processing
+
+    keyword_queries:
+      # Music/Audio Generation
+      - "music generation"
+      - "audio synthesis"
+      - "audio generation"
+      - "music composition"
+      - "neural audio codec"
+      - "audio language model"
+      # Music Understanding & MIR
+      - "music understanding"
+      - "music information retrieval"
+      - "music transcription"
+      - "beat tracking"
+      - "music tagging"
+      # Audio Classification & Events
+      - "audio classification"
+      - "sound event detection"
+      # Source Separation
+      - "source separation"
+      - "voice separation"
+      - "music separation"
+      # Enhancement & Restoration
+      - "audio enhancement"
+      - "speech enhancement"
+      - "music restoration"
+      - "audio super resolution"
+      - "audio upscaling"
+      # Speech & Voice
+      - "speech synthesis"
+      - "text-to-speech"
+      - "voice conversion"
+      # Audio Representations
+      - "audio representation learning"
+      - "audio diffusion"
+      - "audio transformer"
+
+    lookback_days: 7
+    max_results_per_run: 200
+
+filters:
+  required_keywords: []
+  excluded_keywords:
+    - survey
+    - tutorial
+  max_authors: null
+
+ranking:
+  prioritize_recency: true
+  prioritize_keyword_matches: true
+  max_candidates_for_digest: 20
+
+digest:
+  title: Research Digest
+  formats:
+    - markdown
+  include_abstract_excerpt: true
+  include_reason_selected: true
+  include_links: true
+
+summarization:
+  mode: llm
+  provider: gemini

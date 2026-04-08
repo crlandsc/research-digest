@@ -123,13 +123,27 @@ def fetch_papers(
 def _request_with_retry(
     client: httpx.Client,
     params: dict[str, str],
-    max_retries: int = 3,
+    max_retries: int = 4,
 ) -> httpx.Response:
-    """Make request with exponential backoff on 429/503."""
+    """Make request with exponential backoff on 429/503.
+
+    GH Actions shared IPs are commonly rate limited by arXiv,
+    so we use aggressive waits: 30s, 60s, 90s, 120s.
+    """
+    backoff_base = 30
     for attempt in range(max_retries + 1):
-        response = client.get(ARXIV_API_URL, params=params)
+        try:
+            response = client.get(ARXIV_API_URL, params=params)
+        except httpx.ReadTimeout:
+            if attempt < max_retries:
+                wait = backoff_base * (attempt + 1)
+                logger.warning("arXiv request timed out, retrying in %ds (attempt %d/%d)...",
+                               wait, attempt + 1, max_retries)
+                time.sleep(wait)
+                continue
+            raise
         if response.status_code in (429, 503) and attempt < max_retries:
-            wait = int(response.headers.get("Retry-After", 10 * (attempt + 1)))
+            wait = int(response.headers.get("Retry-After", backoff_base * (attempt + 1)))
             logger.warning("arXiv returned %d, retrying in %ds (attempt %d/%d)...",
                            response.status_code, wait, attempt + 1, max_retries)
             time.sleep(wait)
