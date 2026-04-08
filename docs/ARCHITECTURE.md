@@ -11,7 +11,7 @@ Build the smallest maintainable local-first system that can produce a useful res
 - Environment management: standard `venv` + `pip`
 - CLI: Typer or Click
 - HTTP: `httpx`
-- Parsing: standard library XML or a lightweight feed parser
+- Parsing: standard library XML or a lightweight feed parser (arXiv legacy Atom/XML API preferred over experimental REST API)
 - Data validation: Pydantic if useful, but keep it lightweight
 - Persistence: SQLite
 - Testing: `pytest`
@@ -121,13 +121,13 @@ Expected uses:
 
 Preferred initial commands:
 
-- `rdigest fetch`
-- `rdigest rank`
-- `rdigest build`
-- `rdigest run`
+- `research-digest fetch`
+- `research-digest rank`
+- `research-digest build`
+- `research-digest run`
 
 A minimal alternative is acceptable if it is simpler, such as:
-- `rdigest run`
+- `research-digest run`
 
 If the command names change, update the docs.
 
@@ -140,6 +140,17 @@ Optional future outputs:
 - JSON export
 - HTML export
 - email body generation
+
+## Lookback modes
+
+The tool supports two lookback strategies:
+
+1. **N-day lookback** (default for manual runs): fetch papers from the last N days, configurable via `lookback_days` in the topic config.
+2. **Since-last-run** (for automated/scheduled runs): fetch papers published since the last successful fetch, tracked via run history in the database.
+
+Deduplication at the storage layer prevents overlap regardless of mode. The CLI should accept a flag to select the mode (default: N-day).
+
+Note: arXiv's experimental REST API may offer better query capabilities in the future. The current implementation uses the stable legacy Atom/XML API. If the REST API matures, evaluate switching — document the decision.
 
 ## Ranking strategy
 

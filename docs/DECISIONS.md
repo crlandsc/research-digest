@@ -77,6 +77,42 @@ This file records decisions that should survive across sessions.
 - Decision: The MVP remains arXiv-only, but if the project is focused on music/audio AI/ML, the preferred expansion order is ISMIR/TISMIR first, then DCASE and MIREX, then broader audio venues such as ICASSP and IEEE/ACM TASLP.
 - Rationale: This keeps the first implementation simple while aligning future source expansion with the most relevant domain venues and evaluation ecosystems.
 
+## D-012
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: CLI command name is `research-digest` (not `rdigest`).
+- Rationale: More descriptive. User plans automated usage so brevity is less important than clarity.
+
+## D-013
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Target Python 3.12 as minimum. Prefer stability over latest version.
+- Rationale: User preference for proven, stable tooling over bleeding-edge.
+
+## D-014
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Build the tool as general-purpose, but parameterize default config toward music/audio AI/ML interests.
+- Rationale: Architecture should support any research domain; example config and defaults should reflect the primary user's focus.
+
+## D-015
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Use the legacy arXiv Atom/XML API (not the newer experimental REST API).
+- Rationale: Stable, well-documented, sufficient for MVP. Document the REST API in architecture for future consideration.
+
+## D-016
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Support two lookback modes: (1) N-day lookback (default for manual runs), (2) since-last-run (for automated/scheduled runs). Deduplication prevents overlap.
+- Rationale: N-day is simpler for ad-hoc usage. Since-last-run enables complete coverage in automated pipelines without sending duplicates.
+
+## D-017
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Renamed `.env.example` to `env.example` so Claude Code can read it through the sandbox.
+- Rationale: Sandbox denies read access to `.env.*` patterns. The actual `.env` retains the dotfile convention.
+
 ---
 
 ## Instructions for future updates

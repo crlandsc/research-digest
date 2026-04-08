@@ -1,40 +1,55 @@
 # Current State
 
 ## Current milestone
-Milestone 0 — documentation scaffold complete
+Milestone 1 — project scaffold (starting)
 
 ## Completed
-- Base repo docs have been created
-- MVP scope has been defined
-- Architecture direction has been defined
-- Manual escalation protocol has been defined
-- Initial backlog has been defined
+- M0: documentation scaffold
+- Repo audit: all docs internally consistent, no conflicts
+- Decisions D-012 through D-017 recorded (CLI name, Python 3.12, general+audio parameterization, legacy arXiv API, dual lookback modes, env.example rename)
 
 ## In progress
-- Nothing yet
+- Planning implementation for Milestones 1–3 (full local MVP)
 
 ## Blocked
 - No current blockers
+- Entire local MVP path (M1–M3) requires zero external credentials
 
-## Next recommended action
-Claude should:
-1. audit the repository contents against the docs
-2. create the initial Python project scaffold
-3. implement configuration loading
-4. begin the local-first ingest path without requiring external credentials
+## Next milestone plan (M1–M3: local MVP)
+
+### M1 — Project scaffold
+- pyproject.toml with Python 3.12+ and all deps
+- src/research_digest/ package structure per ARCHITECTURE.md
+- CLI entrypoint (`research-digest`) via Typer
+- Config loading from YAML + env vars
+- Basic test scaffold with pytest
+
+### M2 — Ingest and persistence
+- arXiv Atom/XML fetcher via httpx
+- Paper metadata normalization (Pydantic models)
+- SQLite persistence with deduplication
+- Run history tracking (for since-last-run mode)
+- Logging and error handling
+- Tests for config loading and fetch normalization
+
+### M3 — Ranking and digest generation
+- Filtering rules (keyword include/exclude, category match)
+- Deterministic scoring/ranking
+- Markdown digest renderer
+- Dated output to output/<date>/digest.md
+- Dual lookback: N-day default + since-last-run flag
+- `research-digest run` one-command path
+- Tests for ranking and rendering
 
 ## Open decisions
-- No critical open decisions block the initial scaffold
-- Topic customization can happen later
-- LLM provider choice is deferred until optional LLM work begins
-- Delivery channel choice is deferred until the local digest works
+- No critical open decisions block M1–M3
+- LLM provider choice deferred to M5
+- Delivery channel deferred to M5
 
-## Notes for the next session
-The first implementation work should avoid:
-- API key setup
-- deployment setup
-- email provider setup
-- any hosted dependency that is not necessary for local usefulness
+## Manual steps status
+- MS-001 (.env): not needed yet
+- MS-002 (topics.yaml): needed before first real run, not before scaffold
+- MS-003–MS-005: deferred
 
 ## Last updated
-2026-04-07
+2026-04-08
