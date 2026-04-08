@@ -25,9 +25,8 @@ Whenever possible:
 ---
 
 ## MS-001 — Create a local `.env` file
-- Status: Not required yet
-- Needed for: Any feature that reads runtime config or secrets from a local env file
-- Trigger: Only when the implementation actually needs a `.env`
+- Status: Complete (2026-04-08)
+- Contains: GEMINI_API_KEY, EMAIL_FROM, EMAIL_TO, GMAIL_APP_PASSWORD
 
 ### Why human action is required
 This is a local-machine step and may contain secrets.

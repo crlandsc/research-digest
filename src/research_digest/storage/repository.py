@@ -141,7 +141,7 @@ class PaperRepository:
 
     def save_scores(self, run_id: str, scored_papers: list[ScoredPaper]) -> None:
         for sp in scored_papers:
-            paper_id = self._get_paper_id(sp.paper.source, sp.paper.external_id)
+            paper_id = self.get_paper_id(sp.paper.source, sp.paper.external_id)
             if paper_id is None:
                 continue
             self.conn.execute(
@@ -180,7 +180,7 @@ class PaperRepository:
 
     # ── Helpers ─────────────────────────────────────────────────
 
-    def _get_paper_id(self, source: str, external_id: str) -> int | None:
+    def get_paper_id(self, source: str, external_id: str) -> int | None:
         row = self.conn.execute(
             "SELECT id FROM papers WHERE source=? AND external_id=?",
             (source, external_id),

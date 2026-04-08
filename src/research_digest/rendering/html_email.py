@@ -112,10 +112,6 @@ def render_email(
     total_reviewed: int = 0,
 ) -> tuple[str, str]:
     """Render digest as (html, plaintext) for email delivery."""
-    # Add category labels to each entry for template use
-    for entry in entries:
-        entry._category_labels = [category_label(c) for c in entry.paper.categories]
-
     grouped = _group_entries(entries)
 
     ctx = dict(

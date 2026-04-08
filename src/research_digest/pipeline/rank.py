@@ -64,8 +64,8 @@ def apply_filters(papers: list[Paper], filters: FiltersConfig) -> list[Paper]:
     return result
 
 
-def score_paper(paper: Paper, config: AppConfig) -> tuple[float, str]:
-    """Deterministic scoring. Returns (score, reason_string)."""
+def score_paper(paper: Paper, config: AppConfig) -> tuple[float, str, str]:
+    """Deterministic scoring. Returns (score, reason_string, topic_group)."""
     score = 0.0
     reasons: list[str] = []
 

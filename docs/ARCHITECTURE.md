@@ -52,7 +52,8 @@ src/
     cli.py
     config.py
     models.py
-    logging.py
+    categories.py
+    logging_config.py
     fetchers/
       __init__.py
       arxiv.py
@@ -68,21 +69,31 @@ src/
       build_digest.py
     summarization/
       __init__.py
+      base.py
       extractive.py
-      llm.py
+      gemini.py
       providers.py
+    delivery/
+      __init__.py
+      base.py
+      gmail.py
     rendering/
       __init__.py
       markdown.py
+      html_email.py
 
 tests/
+  conftest.py
   test_config.py
   test_arxiv_fetcher.py
   test_ranking.py
+  test_storage.py
   test_digest_rendering.py
+  test_summarization.py
+  test_delivery.py
+  test_pipeline_integration.py
+  test_edge_cases.py
 ```
-
-This structure is a preference, not a prison. Minor adjustments are fine if documented.
 
 ## Data model expectations
 

@@ -56,9 +56,10 @@ class TestFullPipeline:
             patch("research_digest.rendering.markdown.write_digest") as mock_write,
         ):
             mock_write.side_effect = lambda content, **kw: _write_to_tmp(content, tmp_path)
-            path = run_pipeline(sample_config)
+            path, entries = run_pipeline(sample_config)
 
         assert path is not None
+        assert len(entries) > 0
 
     def test_deduplication(self, sample_config: AppConfig, _db_and_repo) -> None:
         conn, repo, _ = _db_and_repo

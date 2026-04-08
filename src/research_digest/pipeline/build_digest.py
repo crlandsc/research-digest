@@ -54,7 +54,7 @@ def run_build(
     # Mark papers as included in digest
     paper_ids = []
     for sp in scored:
-        pid = repo._get_paper_id(sp.paper.source, sp.paper.external_id)
+        pid = repo.get_paper_id(sp.paper.source, sp.paper.external_id)
         if pid is not None:
             paper_ids.append(pid)
     repo.mark_digest_included(run_id, paper_ids)

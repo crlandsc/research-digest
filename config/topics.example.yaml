@@ -3,21 +3,27 @@ version: 1
 sources:
   arxiv:
     enabled: true
-    # Domain-specific categories — all recent papers in these will be fetched
+    # arXiv category codes — papers in these categories matching keywords will be fetched
     categories:
       - cs.SD       # Sound
       - eess.AS     # Audio and Speech Processing
       - cs.MM       # Multimedia
-    # Keywords combined with categories via AND when both present.
-    # Leave empty to fetch all papers in listed categories.
+      - cs.LG       # Machine Learning
+      - cs.AI       # Artificial Intelligence
+      - cs.IR       # Information Retrieval
+      - cs.CL       # Computation and Language
+      - eess.SP     # Signal Processing
+
+    # Keywords combined with categories via AND — only papers matching at least one keyword are returned
+    # Leave empty to fetch all papers in listed categories
     keyword_queries:
       - "music generation"
-      - "music information retrieval"
+      - "audio synthesis"
       - "audio classification"
       - "source separation"
-      - "sound event detection"
       - "speech synthesis"
       - "audio representation learning"
+
     lookback_days: 7
     max_results_per_run: 200
 
@@ -41,6 +47,24 @@ digest:
   include_reason_selected: true
   include_links: true
 
+# Maps keywords to named topic sections in the email digest
+# Papers are assigned to the group whose keywords they match most strongly
+keyword_groups:
+  "Music Generation":
+    - "music generation"
+    - "audio synthesis"
+  "Audio Classification":
+    - "audio classification"
+  "Source Separation":
+    - "source separation"
+  "Speech & Voice":
+    - "speech synthesis"
+  "Audio Representations":
+    - "audio representation learning"
+
 summarization:
+  # "extractive" uses first 3 sentences of abstract (no API key needed)
+  # "llm" uses configured provider for concise newsletter-style summaries
   mode: extractive
+  # "none" for no LLM, "gemini" for Google Gemini Flash (free tier)
   provider: none

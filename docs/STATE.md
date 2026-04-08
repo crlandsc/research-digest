@@ -1,18 +1,19 @@
 # Current State
 
 ## Current milestone
-Milestone 5 — mostly complete. LLM summarization, email, and scheduling done.
+Milestone 5 — complete. All core features implemented and deployed.
 
 ## Completed
 - M0: documentation scaffold
 - M1: project scaffold (pyproject.toml, config, CLI, README quickstart)
 - M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
 - M3: ranking and digest generation (scoring, filters, Markdown renderer)
-- M4: usability hardening (CLI ergonomics, status command, 17 edge case tests)
-- M5: LLM summarization (Gemini Flash provider with abstraction)
-- M5: email delivery (Gmail SMTP with HTML renderer)
-- M5: scheduling (GitHub Actions weekday cron, smart lookback)
-- 110 tests all passing
+- M4: usability hardening (CLI ergonomics, status command, edge case tests)
+- M5: LLM summarization (Gemini 2.5 Flash Lite via provider abstraction)
+- M5: email delivery (Gmail SMTP with newsletter-style HTML)
+- M5: topic grouping (papers grouped by keyword category in email)
+- M5: scheduling (GitHub Actions weekday cron at 8am ET)
+- 112 tests all passing
 
 ## Working commands
 - `research-digest run` — full pipeline (fetch + rank + build)
@@ -24,10 +25,10 @@ Milestone 5 — mostly complete. LLM summarization, email, and scheduling done.
 
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
-- Schedule: weekdays 12:00 UTC (8am EDT)
+- Schedule: weekdays 12:00 UTC (8am EDT / 7am EST)
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
-- Secrets required: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
+- Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
 
 ## Remaining
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
