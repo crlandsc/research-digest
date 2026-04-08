@@ -107,6 +107,16 @@ When blocked by a human-only task, you must:
 [brief description of the next implementation step]
 ```
 
+## Git commit discipline
+
+- Commit incrementally: each logical unit of work gets its own commit.
+- Do not batch all changes into one large commit at the end.
+- Group related file changes together (e.g., a new module + its test + doc update = one commit).
+- Keep commit messages concise, lowercase, descriptive of what changed and why.
+- Match the existing commit style in the repo (short subject, optional body).
+- Commit doc-only updates separately from code changes when practical.
+- Never commit secrets, `.env`, or user-specific config files.
+
 ## Session workflow
 
 At the beginning of a work session:
