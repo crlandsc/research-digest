@@ -9,29 +9,29 @@ This file is the prioritized build backlog.
 - [x] Define manual-step escalation protocol
 
 ## Milestone 1 — project scaffold
-- [ ] Create Python project scaffold
-- [ ] Add `pyproject.toml`
-- [ ] Add initial package structure under `src/`
-- [ ] Add testing scaffold
-- [ ] Add basic CLI entrypoint
-- [ ] Add config loading from YAML and env vars
+- [x] Create Python project scaffold
+- [x] Add `pyproject.toml`
+- [x] Add initial package structure under `src/`
+- [x] Add testing scaffold
+- [x] Add basic CLI entrypoint
+- [x] Add config loading from YAML and env vars
 - [ ] Add README quickstart for local runs
 
 ## Milestone 2 — ingest and persistence
-- [ ] Implement arXiv fetcher
-- [ ] Normalize paper metadata
-- [ ] Add local SQLite persistence
-- [ ] Add deduplication logic
-- [ ] Add basic logging and error handling
-- [ ] Add tests for config and fetch normalization
+- [x] Implement arXiv fetcher
+- [x] Normalize paper metadata
+- [x] Add local SQLite persistence
+- [x] Add deduplication logic
+- [x] Add basic logging and error handling
+- [x] Add tests for config and fetch normalization
 
 ## Milestone 3 — ranking and digest generation
-- [ ] Implement filtering rules
-- [ ] Implement deterministic ranking
-- [ ] Generate Markdown digest
-- [ ] Write output to dated local folder
-- [ ] Add tests for ranking and rendering
-- [ ] Add one-command local run path
+- [x] Implement filtering rules
+- [x] Implement deterministic ranking
+- [x] Generate Markdown digest
+- [x] Write output to dated local folder
+- [x] Add tests for ranking and rendering
+- [x] Add one-command local run path
 
 ## Milestone 4 — usability hardening
 - [ ] Improve CLI ergonomics

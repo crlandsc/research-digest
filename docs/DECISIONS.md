@@ -113,6 +113,30 @@ This file records decisions that should survive across sessions.
 - Decision: Renamed `.env.example` to `env.example` so Claude Code can read it through the sandbox.
 - Rationale: Sandbox denies read access to `.env.*` patterns. The actual `.env` retains the dotfile convention.
 
+## D-018
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Summarization subpackage deferred; extractive summary in pipeline/summarize.py for MVP.
+- Rationale: Full summarization/ package with LLM providers not needed until optional LLM work begins.
+
+## D-019
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: arXiv query uses AND between categories and keywords when both present.
+- Rationale: Simple, predictable. Users wanting all papers in a category should leave keyword_queries empty.
+
+## D-020
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Hatchling build backend for pyproject.toml with src layout.
+- Rationale: Lightweight, modern, native src layout support.
+
+## D-021
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: Sync httpx only (no async). Jinja2 template inline in rendering/markdown.py.
+- Rationale: CLI tool with 3s API delays doesn't benefit from async. Inline template is simpler than separate file.
+
 ---
 
 ## Instructions for future updates
