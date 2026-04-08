@@ -123,14 +123,15 @@ def fetch_papers(
 def _request_with_retry(
     client: httpx.Client,
     params: dict[str, str],
-    max_retries: int = 2,
+    max_retries: int = 3,
 ) -> httpx.Response:
-    """Make request with retry on 429/503."""
+    """Make request with exponential backoff on 429/503."""
     for attempt in range(max_retries + 1):
         response = client.get(ARXIV_API_URL, params=params)
         if response.status_code in (429, 503) and attempt < max_retries:
-            wait = int(response.headers.get("Retry-After", 10))
-            logger.warning("arXiv returned %d, retrying in %ds...", response.status_code, wait)
+            wait = int(response.headers.get("Retry-After", 10 * (attempt + 1)))
+            logger.warning("arXiv returned %d, retrying in %ds (attempt %d/%d)...",
+                           response.status_code, wait, attempt + 1, max_retries)
             time.sleep(wait)
             continue
         response.raise_for_status()

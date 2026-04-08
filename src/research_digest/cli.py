@@ -8,7 +8,7 @@ from uuid import uuid4
 import typer
 
 from research_digest import __version__
-from research_digest.config import load_config
+from research_digest.config import AppConfig, load_config
 from research_digest.logging_config import setup_logging
 from research_digest.storage.db import get_connection
 from research_digest.storage.repository import PaperRepository
