@@ -3,28 +3,35 @@ version: 1
 sources:
   arxiv:
     enabled: true
+    # Domain-specific categories — all recent papers in these will be fetched
     categories:
-      - cs.AI
-      - cs.LG
-      - cs.CL
+      - cs.SD       # Sound
+      - eess.AS     # Audio and Speech Processing
+      - cs.MM       # Multimedia
+    # Keywords combined with categories via AND when both present.
+    # Leave empty to fetch all papers in listed categories.
     keyword_queries:
-      - agent
-      - tool use
-      - retrieval
-    lookback_days: 3
-    max_results_per_run: 100
+      - "music generation"
+      - "music information retrieval"
+      - "audio classification"
+      - "source separation"
+      - "sound event detection"
+      - "speech synthesis"
+      - "audio representation learning"
+    lookback_days: 7
+    max_results_per_run: 200
 
 filters:
   required_keywords: []
   excluded_keywords:
     - survey
-    - workshop
+    - tutorial
   max_authors: null
 
 ranking:
   prioritize_recency: true
   prioritize_keyword_matches: true
-  max_candidates_for_digest: 15
+  max_candidates_for_digest: 20
 
 digest:
   title: Research Digest
