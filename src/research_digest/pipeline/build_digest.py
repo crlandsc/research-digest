@@ -8,6 +8,7 @@ from research_digest.models import DigestEntry
 from research_digest.pipeline.summarize import extractive_summary
 from research_digest.rendering.markdown import render_digest, write_digest
 from research_digest.storage.repository import PaperRepository
+from research_digest.summarization.providers import get_provider
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +25,19 @@ def run_build(
     if not scored:
         logger.warning("No scored papers found for run %s", run_id)
 
+    # Generate summaries via configured provider
+    provider = get_provider(config)
+    papers = [sp.paper for sp in scored]
+    summaries = provider.summarize_papers(papers)
+
     entries = [
         DigestEntry(
             paper=sp.paper,
             score=sp.score,
             rank=sp.rank,
             reason=sp.reason,
-            abstract_excerpt=extractive_summary(sp.paper.abstract)
-            if config.digest.include_abstract_excerpt
-            else None,
+            abstract_excerpt=summaries.get(sp.paper.external_id)
+            or extractive_summary(sp.paper.abstract),
         )
         for sp in scored
     ]
