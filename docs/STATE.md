@@ -20,14 +20,12 @@ Milestone 3 — complete. Local MVP is functional.
 - `research-digest run --since-last-run` — fetch only new papers since last run
 
 ## Next steps
-1. Create `config/topics.yaml` with user — tailor to specific music/audio AI/ML interests (MS-002)
-2. First live run with real arXiv data to validate end-to-end
-3. Begin M4 (usability hardening) if desired
-4. Optional: LLM summarization, scheduling, delivery (M5)
+1. Begin M4 (usability hardening) if desired
+2. Optional: LLM summarization, scheduling, delivery (M5)
 
 ## Manual steps status
 - MS-001 (.env): not needed yet
-- MS-002 (topics.yaml): **ready to do** — create collaboratively with user before first real run
+- MS-002 (topics.yaml): complete (2026-04-08) — 28 keywords, 8 categories, music/audio AI/ML focus
 - MS-003–MS-005: deferred
 
 ## Open decisions

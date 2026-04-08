@@ -49,7 +49,7 @@ Claude should verify by checking that required env vars are present or that the 
 ---
 
 ## MS-002 — Create a local topic config
-- Status: Planned — do collaboratively with user before first real run (after M3 scaffold complete)
+- Status: Complete (2026-04-08)
 - Needed for: Running the digest against real interests
 - Trigger: When the implementation is ready to read a user-specific config file
 
