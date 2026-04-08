@@ -1,0 +1,99 @@
+"""Tests for email delivery."""
+
+from datetime import datetime, timezone
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from research_digest.config import AppConfig
+from research_digest.models import DigestEntry, Paper
+from research_digest.rendering.html_email import render_email
+
+
+def _entry(rank: int = 1) -> DigestEntry:
+    return DigestEntry(
+        paper=Paper(
+            source="arxiv",
+            external_id=f"2401.{rank:05d}",
+            title=f"Test Paper {rank}",
+            authors=["Alice", "Bob"],
+            abstract="Test abstract.",
+            categories=["cs.SD"],
+            published_at=datetime(2024, 1, 15, tzinfo=timezone.utc),
+            canonical_url=f"http://arxiv.org/abs/2401.{rank:05d}",
+            pdf_url=f"http://arxiv.org/pdf/2401.{rank:05d}",
+        ),
+        score=50.0 - rank * 10,
+        rank=rank,
+        reason="test reason",
+        abstract_excerpt="A concise newsletter-style summary.",
+    )
+
+
+class TestHtmlEmail:
+    def test_render_basic(self) -> None:
+        entries = [_entry(1), _entry(2)]
+        cfg = AppConfig()
+        html, text = render_email(entries, cfg)
+        assert "Test Paper 1" in html
+        assert "Test Paper 2" in html
+        assert "<html>" in html
+        assert "Test Paper 1" in text
+
+    def test_render_empty(self) -> None:
+        cfg = AppConfig()
+        html, text = render_email([], cfg)
+        assert "No papers matched" in html
+        assert "No papers matched" in text
+
+    def test_html_contains_links(self) -> None:
+        entries = [_entry(1)]
+        cfg = AppConfig()
+        html, _ = render_email(entries, cfg)
+        assert "arxiv.org/abs/" in html
+        assert "arxiv.org/pdf/" in html
+
+    def test_html_contains_summary(self) -> None:
+        entries = [_entry(1)]
+        cfg = AppConfig()
+        html, _ = render_email(entries, cfg)
+        assert "newsletter-style summary" in html
+
+
+class TestGmailProvider:
+    def test_missing_from_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("EMAIL_FROM", raising=False)
+        monkeypatch.delenv("EMAIL_TO", raising=False)
+        monkeypatch.delenv("GMAIL_APP_PASSWORD", raising=False)
+        from research_digest.delivery.gmail import GmailProvider
+        with pytest.raises(ValueError, match="EMAIL_FROM"):
+            GmailProvider()
+
+    def test_missing_password_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("EMAIL_FROM", "test@test.com")
+        monkeypatch.setenv("EMAIL_TO", "test@test.com")
+        monkeypatch.delenv("GMAIL_APP_PASSWORD", raising=False)
+        from research_digest.delivery.gmail import GmailProvider
+        with pytest.raises(ValueError, match="GMAIL_APP_PASSWORD"):
+            GmailProvider()
+
+    def test_send_calls_smtp(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("EMAIL_FROM", "from@test.com")
+        monkeypatch.setenv("EMAIL_TO", "to@test.com")
+        monkeypatch.setenv("GMAIL_APP_PASSWORD", "testpass")
+
+        from research_digest.delivery.gmail import GmailProvider
+
+        provider = GmailProvider()
+
+        mock_smtp = MagicMock()
+        mock_smtp_instance = MagicMock()
+        mock_smtp.__enter__ = MagicMock(return_value=mock_smtp_instance)
+        mock_smtp.__exit__ = MagicMock(return_value=False)
+
+        with patch("research_digest.delivery.gmail.smtplib.SMTP", return_value=mock_smtp):
+            provider.send("Test Subject", "<h1>HTML</h1>", "Plain text")
+
+        mock_smtp_instance.starttls.assert_called_once()
+        mock_smtp_instance.login.assert_called_once_with("from@test.com", "testpass")
+        mock_smtp_instance.send_message.assert_called_once()

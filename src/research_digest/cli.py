@@ -142,6 +142,7 @@ def run(
     since_last_run: Annotated[bool, typer.Option("--since-last-run", help="Fetch since last successful run.")] = False,
     lookback_days: Annotated[int | None, typer.Option("--lookback-days", help="Override lookback days.")] = None,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Print query without fetching.")] = False,
+    send_email: Annotated[bool, typer.Option("--send-email", help="Send digest via email after build.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Run full pipeline: fetch, rank, build digest."""
@@ -154,11 +155,56 @@ def run(
         path = run_pipeline(cfg, since_last_run, lookback_days, dry_run)
         if path:
             typer.echo(f"Digest written to {path}")
+            if send_email:
+                _send_digest(cfg, path)
         elif dry_run:
             typer.echo("Dry run complete.")
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
+
+
+@app.command()
+def send(
+    config: Annotated[Path | None, typer.Option("--config", help="Path to topics config YAML.")] = None,
+    digest_path: Annotated[Path | None, typer.Option("--digest", help="Path to digest .md file to send.")] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
+) -> None:
+    """Send the most recent digest via email."""
+    setup_logging("DEBUG" if verbose else "WARNING")
+    cfg = load_config(config)
+
+    if digest_path is None:
+        conn = get_connection()
+        repo = PaperRepository(conn)
+        last = repo.get_last_successful_run()
+        if last and last.digest_path:
+            digest_path = Path(last.digest_path)
+        else:
+            typer.echo("No digest found. Run 'research-digest run' first.", err=True)
+            raise typer.Exit(1)
+
+    if not digest_path.exists():
+        typer.echo(f"Digest file not found: {digest_path}", err=True)
+        raise typer.Exit(1)
+
+    _send_digest(cfg, digest_path)
+
+
+def _send_digest(cfg: AppConfig, digest_path: Path) -> None:
+    """Build email from digest entries and send."""
+    from research_digest.delivery.gmail import GmailProvider
+    from research_digest.models import DigestEntry
+    from research_digest.pipeline.build_digest import _load_entries_from_last_run
+    from research_digest.rendering.html_email import render_email
+
+    entries = _load_entries_from_last_run(cfg)
+    html, text = render_email(entries, cfg)
+
+    provider = GmailProvider()
+    subject = f"{cfg.digest.title} — {digest_path.parent.name}"
+    provider.send(subject, html, text)
+    typer.echo(f"Email sent to {provider.to_addr}")
 
 
 @app.command()

@@ -56,3 +56,34 @@ def run_build(
 
     logger.info("Built digest with %d entries at %s", len(entries), path)
     return path
+
+
+def _load_entries_from_last_run(config: AppConfig) -> list[DigestEntry]:
+    """Load digest entries from the most recent successful run (for email rendering)."""
+    from research_digest.storage.db import get_connection
+
+    conn = get_connection()
+    repo = PaperRepository(conn)
+
+    last = repo.get_last_successful_run()
+    if not last:
+        return []
+
+    limit = config.ranking.max_candidates_for_digest
+    scored = repo.get_top_scored(last.run_id, limit)
+
+    provider = get_provider(config)
+    papers = [sp.paper for sp in scored]
+    summaries = provider.summarize_papers(papers)
+
+    return [
+        DigestEntry(
+            paper=sp.paper,
+            score=sp.score,
+            rank=sp.rank,
+            reason=sp.reason,
+            abstract_excerpt=summaries.get(sp.paper.external_id)
+            or extractive_summary(sp.paper.abstract),
+        )
+        for sp in scored
+    ]
