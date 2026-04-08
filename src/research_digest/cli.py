@@ -78,9 +78,25 @@ def rank(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Score and rank stored papers."""
+    from research_digest.pipeline.rank import run_rank
+
     setup_logging("DEBUG" if verbose else None)
     cfg = load_config(config)
-    typer.echo("rank: not yet implemented (wired in M3)")
+
+    conn = get_connection()
+    repo = PaperRepository(conn)
+
+    if run_id is None:
+        last = repo.get_most_recent_run()
+        if not last:
+            typer.echo("No runs found. Run 'research-digest fetch' first.", err=True)
+            raise typer.Exit(1)
+        run_id = last.run_id
+
+    scored = run_rank(cfg, repo, run_id)
+    typer.echo(f"Ranked {len(scored)} papers [run: {run_id[:8]}]")
+    for sp in scored[:5]:
+        typer.echo(f"  #{sp.rank} ({sp.score:.1f}) {sp.paper.title[:60]}")
 
 
 @app.command()
@@ -90,9 +106,24 @@ def build(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Build Markdown digest from ranked papers."""
+    from research_digest.pipeline.build_digest import run_build
+
     setup_logging("DEBUG" if verbose else None)
     cfg = load_config(config)
-    typer.echo("build: not yet implemented (wired in M3)")
+
+    conn = get_connection()
+    repo = PaperRepository(conn)
+
+    if run_id is None:
+        last = repo.get_most_recent_run()
+        if not last:
+            typer.echo("No runs found. Run 'research-digest fetch' first.", err=True)
+            raise typer.Exit(1)
+        run_id = last.run_id
+
+    path = run_build(cfg, repo, run_id)
+    if path:
+        typer.echo(f"Digest written to {path}")
 
 
 @app.command()
@@ -104,6 +135,17 @@ def run(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
     """Run full pipeline: fetch, rank, build digest."""
+    from research_digest.pipeline import run_pipeline
+
     setup_logging("DEBUG" if verbose else None)
     cfg = load_config(config)
-    typer.echo("run: not yet implemented (wired in M3)")
+
+    try:
+        path = run_pipeline(cfg, since_last_run, lookback_days, dry_run)
+        if path:
+            typer.echo(f"Digest written to {path}")
+        elif dry_run:
+            typer.echo("Dry run complete.")
+    except Exception as e:
+        typer.echo(f"Pipeline failed: {e}", err=True)
+        raise typer.Exit(1)
