@@ -137,6 +137,12 @@ This file records decisions that should survive across sessions.
 - Decision: Sync httpx only (no async). Jinja2 template inline in rendering/markdown.py.
 - Rationale: CLI tool with 3s API delays doesn't benefit from async. Inline template is simpler than separate file.
 
+## D-022
+- Date: 2026-04-08
+- Status: Deferred
+- Decision: Non-arXiv source adapters (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP) deferred indefinitely.
+- Rationale: Most papers from these venues are posted to arXiv (cs.SD, eess.AS) before or around publication. Adding scrapers for conference websites would require significant maintenance for marginal coverage gain. Revisit only if specific papers are consistently being missed.
+
 ---
 
 ## Instructions for future updates
