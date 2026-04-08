@@ -24,6 +24,7 @@ MAX_RESULTS_PER_PAGE = 2000
 USER_AGENT = "research-digest/0.1.0 (local CLI tool)"
 
 _VERSION_RE = re.compile(r"v\d+$")
+_CODE_URL_RE = re.compile(r"https?://(?:github\.com|gitlab\.com|bitbucket\.org)/[^\s,;)}\]\"'<>]+", re.IGNORECASE)
 
 
 def build_query(
@@ -248,6 +249,10 @@ def _entry_to_paper(entry: ET.Element) -> Paper:
             pdf_url = link.get("href")
             break
 
+    # Extract code URL from comment or abstract
+    comment = _text(entry, "arxiv:comment")
+    code_url = _extract_code_url(comment, abstract)
+
     return Paper(
         source="arxiv",
         external_id=external_id,
@@ -259,7 +264,18 @@ def _entry_to_paper(entry: ET.Element) -> Paper:
         updated_at=updated_at,
         canonical_url=canonical_url,
         pdf_url=pdf_url,
+        code_url=code_url,
     )
+
+
+def _extract_code_url(*texts: str) -> str | None:
+    """Find the first GitHub/GitLab/Bitbucket URL in any of the given texts."""
+    for text in texts:
+        match = _CODE_URL_RE.search(text)
+        if match:
+            url = match.group(0).rstrip(".")
+            return url
+    return None
 
 
 def _text(element: ET.Element, tag: str) -> str:

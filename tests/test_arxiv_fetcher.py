@@ -6,6 +6,7 @@ import pytest
 
 from research_digest.config import ArxivSourceConfig
 from research_digest.fetchers.arxiv import (
+    _extract_code_url,
     build_query,
     compute_date_range,
     parse_arxiv_response,
@@ -58,6 +59,26 @@ ERROR_FEED = """\
     <id>http://arxiv.org/api/errors#incorrect_id_format_for_1234</id>
     <title>Error</title>
     <summary>incorrect id format for 1234</summary>
+  </entry>
+</feed>
+"""
+
+FEED_WITH_CODE = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/"
+      xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <entry>
+    <id>http://arxiv.org/abs/2401.55555v1</id>
+    <published>2024-01-15T00:00:00Z</published>
+    <updated>2024-01-15T00:00:00Z</updated>
+    <title>Audio Model with Code</title>
+    <summary>We release our code.</summary>
+    <author><name>Alice</name></author>
+    <category term="cs.SD"/>
+    <arxiv:comment>10 pages; code available at https://github.com/alice/audio-model</arxiv:comment>
+    <link href="http://arxiv.org/abs/2401.55555v1" rel="alternate"/>
   </entry>
 </feed>
 """
@@ -132,6 +153,32 @@ class TestParseArxivResponse:
         papers, total = parse_arxiv_response(EMPTY_FEED)
         assert papers == []
         assert total == 0
+
+
+class TestCodeUrlExtraction:
+    def test_extracts_from_comment(self) -> None:
+        papers, _ = parse_arxiv_response(FEED_WITH_CODE)
+        assert papers[0].code_url == "https://github.com/alice/audio-model"
+
+    def test_no_code_url(self) -> None:
+        papers, _ = parse_arxiv_response(SAMPLE_FEED)
+        assert papers[0].code_url is None
+        assert papers[1].code_url is None
+
+    def test_extract_github_url(self) -> None:
+        assert _extract_code_url("Code at https://github.com/user/repo") == "https://github.com/user/repo"
+
+    def test_extract_gitlab_url(self) -> None:
+        assert _extract_code_url("See https://gitlab.com/user/project for code") == "https://gitlab.com/user/project"
+
+    def test_extract_from_abstract(self) -> None:
+        assert _extract_code_url("No code here", "Available at https://github.com/org/tool") == "https://github.com/org/tool"
+
+    def test_no_url_returns_none(self) -> None:
+        assert _extract_code_url("No URLs here", "Nothing here either") is None
+
+    def test_strips_trailing_period(self) -> None:
+        assert _extract_code_url("Code: https://github.com/user/repo.") == "https://github.com/user/repo"
 
 
 class TestBuildQuery:

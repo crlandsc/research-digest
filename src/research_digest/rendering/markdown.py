@@ -41,6 +41,7 @@ _Selected because: {{ entry.reason }}_
 
 - [Abstract]({{ entry.paper.canonical_url }})
 {% if entry.paper.pdf_url %}- [PDF]({{ entry.paper.pdf_url }})
+{% endif %}{% if entry.paper.code_url %}- [Code]({{ entry.paper.code_url }})
 {% endif %}
 {% endif %}
 ---

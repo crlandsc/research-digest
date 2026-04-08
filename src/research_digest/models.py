@@ -18,6 +18,7 @@ class Paper(BaseModel):
     updated_at: datetime | None = None
     canonical_url: str
     pdf_url: str | None = None
+    code_url: str | None = None
 
 
 class ScoredPaper(BaseModel):

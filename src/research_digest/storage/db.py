@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS papers (
     updated_at      TEXT,
     canonical_url   TEXT NOT NULL,
     pdf_url         TEXT,
+    code_url        TEXT,
     first_seen      TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(source, external_id)
 );

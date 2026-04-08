@@ -21,8 +21,8 @@ class PaperRepository:
         cursor = self.conn.execute(
             """INSERT OR IGNORE INTO papers
                (source, external_id, title, authors, abstract, categories,
-                published_at, updated_at, canonical_url, pdf_url)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                published_at, updated_at, canonical_url, pdf_url, code_url)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 paper.source,
                 paper.external_id,
@@ -34,6 +34,7 @@ class PaperRepository:
                 paper.updated_at.isoformat() if paper.updated_at else None,
                 paper.canonical_url,
                 paper.pdf_url,
+                paper.code_url,
             ),
         )
         self.conn.commit()
@@ -53,8 +54,8 @@ class PaperRepository:
             cursor = self.conn.execute(
                 """INSERT OR IGNORE INTO papers
                    (source, external_id, title, authors, abstract, categories,
-                    published_at, updated_at, canonical_url, pdf_url)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    published_at, updated_at, canonical_url, pdf_url, code_url)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     paper.source,
                     paper.external_id,
@@ -66,6 +67,7 @@ class PaperRepository:
                     paper.updated_at.isoformat() if paper.updated_at else None,
                     paper.canonical_url,
                     paper.pdf_url,
+                    paper.code_url,
                 ),
             )
             if cursor.rowcount > 0:
@@ -200,6 +202,7 @@ class PaperRepository:
             updated_at=datetime.fromisoformat(row["updated_at"]) if row["updated_at"] else None,
             canonical_url=row["canonical_url"],
             pdf_url=row["pdf_url"],
+            code_url=row["code_url"] if "code_url" in row.keys() else None,
         )
 
     @staticmethod

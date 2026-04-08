@@ -49,6 +49,7 @@ _EMAIL_TEMPLATE = Template(
 <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:13px; color:#999; margin:0 0 {{ '28px' if not loop.last else '0' }};">
   <a href="{{ entry.paper.canonical_url }}" style="color:#2563eb; text-decoration:none;">Abstract</a>
   {% if entry.paper.pdf_url %}&nbsp;&middot;&nbsp;<a href="{{ entry.paper.pdf_url }}" style="color:#2563eb; text-decoration:none;">PDF</a>{% endif %}
+  {% if entry.paper.code_url %}&nbsp;&middot;&nbsp;<a href="{{ entry.paper.code_url }}" style="color:#2563eb; text-decoration:none;">Code</a>{% endif %}
   &nbsp;&middot;&nbsp;{{ entry.category_labels | join(', ') }}
 </p>
 {% if not loop.last %}
