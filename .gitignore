@@ -17,8 +17,6 @@ dist/
 build/
 *.egg-info/
 
-# Local config (topics.yaml is committed; it contains no secrets)
-
 # Local data and generated output
 data/
 output/
