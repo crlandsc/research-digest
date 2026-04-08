@@ -60,6 +60,7 @@ class AppConfig(BaseModel):
     filters: FiltersConfig = FiltersConfig()
     ranking: RankingConfig = RankingConfig()
     digest: DigestConfig = DigestConfig()
+    keyword_groups: dict[str, list[str]] = {}
     summarization: SummarizationConfig = SummarizationConfig()
 
 

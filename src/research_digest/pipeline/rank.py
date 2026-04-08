@@ -22,10 +22,10 @@ def run_rank(
     filtered = apply_filters(papers, config.filters)
     logger.info("%d papers after filtering (%d removed)", len(filtered), len(papers) - len(filtered))
 
-    scored: list[tuple[float, str, Paper]] = []
+    scored: list[tuple[float, str, str, Paper]] = []
     for paper in filtered:
-        score, reason = score_paper(paper, config)
-        scored.append((score, reason, paper))
+        score, reason, topic = score_paper(paper, config)
+        scored.append((score, reason, topic, paper))
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
@@ -33,8 +33,8 @@ def run_rank(
     top = scored[:limit]
 
     result = [
-        ScoredPaper(paper=paper, score=score, rank=i + 1, reason=reason)
-        for i, (score, reason, paper) in enumerate(top)
+        ScoredPaper(paper=paper, score=score, rank=i + 1, reason=reason, topic_group=topic)
+        for i, (score, reason, topic, paper) in enumerate(top)
     ]
 
     repo.save_scores(run_id, result)
@@ -113,7 +113,34 @@ def score_paper(paper: Paper, config: AppConfig) -> tuple[float, str]:
         reasons.append(f"authors:{len(paper.authors)}(-5)")
 
     reason_str = ", ".join(reasons) + f" \u2192 {score:.1f}" if reasons else "no matching signals \u2192 0.0"
-    return (score, reason_str)
+    topic = _determine_topic_group(paper, config)
+    return (score, reason_str, topic)
+
+
+def _determine_topic_group(paper: Paper, config: AppConfig) -> str:
+    """Assign paper to topic group based on highest-scoring keyword match.
+
+    Checks title first (stronger signal), then abstract.
+    Returns the group name, or "Other" if no keyword match.
+    """
+    title_lower = paper.title.lower()
+    abstract_lower = paper.abstract.lower()
+    best_group = "Other"
+    best_score = 0
+
+    for group_name, keywords in config.keyword_groups.items():
+        group_score = 0
+        for kw in keywords:
+            kw_lower = kw.lower()
+            if kw_lower in title_lower:
+                group_score += 15  # title match is strongest signal
+            if kw_lower in abstract_lower:
+                group_score += 5
+        if group_score > best_score:
+            best_score = group_score
+            best_group = group_name
+
+    return best_group
 
 
 def _any_keyword_in_text(keywords: list[str], *texts: str) -> bool:

@@ -27,18 +27,18 @@ def _paper(**kwargs) -> Paper:
 class TestScoring:
     def test_category_match_single(self, sample_config: AppConfig) -> None:
         paper = _paper(categories=["cs.SD"])
-        score, reason = score_paper(paper, sample_config)
+        score, reason, _ = score_paper(paper, sample_config)
         assert score >= 10
         assert "category:cs.SD(+10)" in reason
 
     def test_category_match_multiple(self, sample_config: AppConfig) -> None:
         paper = _paper(categories=["cs.SD", "eess.AS"])
-        score, _ = score_paper(paper, sample_config)
+        score, _, _ = score_paper(paper, sample_config)
         assert score >= 20  # +10 per matching category
 
     def test_keyword_in_title(self, sample_config: AppConfig) -> None:
         paper = _paper(title="Music Generation with Transformers")
-        score, reason = score_paper(paper, sample_config)
+        score, reason, _ = score_paper(paper, sample_config)
         assert score >= 15
         assert "title(+15)" in reason
 
@@ -47,7 +47,7 @@ class TestScoring:
             title="A New Method",
             abstract="We study music generation approaches.",
         )
-        score, reason = score_paper(paper, sample_config)
+        score, reason, _ = score_paper(paper, sample_config)
         assert score >= 5
         assert "abstract(+5)" in reason
 
@@ -56,29 +56,29 @@ class TestScoring:
             title="Music Generation Models",
             abstract="This paper on music generation presents...",
         )
-        score, _ = score_paper(paper, sample_config)
+        score, _, _ = score_paper(paper, sample_config)
         # +15 title + +5 abstract = +20 for this keyword alone
         assert score >= 20
 
     def test_recency_within_24h(self, sample_config: AppConfig) -> None:
         paper = _paper(published_at=datetime.now(timezone.utc) - timedelta(hours=12))
-        score, reason = score_paper(paper, sample_config)
+        score, reason, _ = score_paper(paper, sample_config)
         assert "recent:24h(+10)" in reason
 
     def test_recency_within_72h(self, sample_config: AppConfig) -> None:
         paper = _paper(published_at=datetime.now(timezone.utc) - timedelta(hours=48))
-        score, reason = score_paper(paper, sample_config)
+        score, reason, _ = score_paper(paper, sample_config)
         assert "recent:72h(+5)" in reason
 
     def test_recency_old(self, sample_config: AppConfig) -> None:
         paper = _paper(published_at=datetime.now(timezone.utc) - timedelta(days=7))
-        _, reason = score_paper(paper, sample_config)
+        _, reason, _ = score_paper(paper, sample_config)
         assert "recent" not in reason
 
     def test_recency_disabled(self, sample_config: AppConfig) -> None:
         sample_config.ranking.prioritize_recency = False
         paper = _paper(published_at=datetime.now(timezone.utc) - timedelta(hours=12))
-        _, reason = score_paper(paper, sample_config)
+        _, reason, _ = score_paper(paper, sample_config)
         assert "recent" not in reason
 
     def test_no_matches(self, sample_config: AppConfig) -> None:
@@ -88,7 +88,7 @@ class TestScoring:
             abstract="Pure mathematics content.",
             published_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
         )
-        score, _ = score_paper(paper, sample_config)
+        score, _, _ = score_paper(paper, sample_config)
         assert score == 0.0
 
     def test_multiple_signals_cumulative(self, sample_config: AppConfig) -> None:
@@ -98,7 +98,7 @@ class TestScoring:
             abstract="We propose a source separation method.",
             published_at=datetime.now(timezone.utc) - timedelta(hours=6),
         )
-        score, _ = score_paper(paper, sample_config)
+        score, _, _ = score_paper(paper, sample_config)
         # +10 category + +15 title kw + +5 abstract kw + +10 recency = 40+
         assert score >= 40
 
@@ -106,14 +106,14 @@ class TestScoring:
         cfg = AppConfig()
         cfg.filters.required_keywords = ["diffusion"]
         paper = _paper(abstract="We use diffusion models.")
-        score, reason = score_paper(paper, cfg)
+        score, reason, _ = score_paper(paper, cfg)
         assert score >= 20
         assert "required:'diffusion'(+20)" in reason
 
     def test_author_penalty(self, sample_config: AppConfig) -> None:
         sample_config.filters.max_authors = 2
         paper = _paper(authors=["A", "B", "C"])
-        score, reason = score_paper(paper, sample_config)
+        score, reason, _ = score_paper(paper, sample_config)
         assert "(-5)" in reason
 
 
@@ -195,5 +195,5 @@ class TestRanking:
 
     def test_reason_contains_signals(self, sample_config: AppConfig) -> None:
         paper = _paper(categories=["cs.SD"], title="Source Separation")
-        _, reason = score_paper(paper, sample_config)
+        _, reason, _ = score_paper(paper, sample_config)
         assert "→" in reason

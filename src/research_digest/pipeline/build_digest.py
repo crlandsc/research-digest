@@ -42,6 +42,7 @@ def run_build(
             reason=sp.reason,
             abstract_excerpt=summaries.get(sp.paper.external_id)
             or extractive_summary(sp.paper.abstract),
+            topic_group=sp.topic_group,
         )
         for sp in scored
     ]

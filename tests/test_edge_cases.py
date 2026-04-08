@@ -91,7 +91,7 @@ class TestScoringEdgeCases:
     def test_empty_categories_in_config(self) -> None:
         cfg = AppConfig()
         cfg.sources.arxiv.categories = []
-        score, _ = score_paper(_paper(categories=["cs.SD"]), cfg)
+        score, _, _ = score_paper(_paper(categories=["cs.SD"]), cfg)
         # no category bonus since config has none
         assert score >= 0
 
@@ -99,14 +99,14 @@ class TestScoringEdgeCases:
         cfg = AppConfig()
         cfg.sources.arxiv.keyword_queries = []
         cfg.ranking.prioritize_recency = False
-        score, _ = score_paper(_paper(), cfg)
+        score, _, _ = score_paper(_paper(), cfg)
         assert score == 0 or score > 0  # only category match possible
 
     def test_keyword_case_insensitive(self) -> None:
         cfg = AppConfig()
         cfg.sources.arxiv.keyword_queries = ["MUSIC GENERATION"]
         paper = _paper(title="music generation with diffusion")
-        score, _ = score_paper(paper, cfg)
+        score, _, _ = score_paper(paper, cfg)
         assert score >= 15
 
     def test_keyword_partial_match(self) -> None:
@@ -114,7 +114,7 @@ class TestScoringEdgeCases:
         cfg = AppConfig()
         cfg.sources.arxiv.keyword_queries = ["audio"]
         paper = _paper(abstract="We study audio classification methods.")
-        score, reason = score_paper(paper, cfg)
+        score, reason, _ = score_paper(paper, cfg)
         assert "abstract" in reason
 
 

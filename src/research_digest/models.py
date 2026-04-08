@@ -27,6 +27,7 @@ class ScoredPaper(BaseModel):
     score: float
     rank: int
     reason: str
+    topic_group: str = "Other"
 
 
 class RunRecord(BaseModel):
@@ -50,3 +51,4 @@ class DigestEntry(BaseModel):
     rank: int
     reason: str
     abstract_excerpt: str | None = None
+    topic_group: str = "Other"
