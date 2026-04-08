@@ -13,7 +13,7 @@ from research_digest.models import Paper
 
 logger = logging.getLogger(__name__)
 
-ARXIV_API_URL = "http://export.arxiv.org/api/query"
+ARXIV_API_URL = "https://export.arxiv.org/api/query"
 NAMESPACES = {
     "atom": "http://www.w3.org/2005/Atom",
     "opensearch": "http://a9.com/-/spec/opensearch/1.1/",
@@ -33,25 +33,26 @@ def build_query(
 ) -> str:
     """Build the search_query parameter for the arXiv API.
 
+    Returns plain text — httpx handles URL encoding when passed as a param.
     Combines categories (OR'd), keywords (OR'd), joined with AND if both present.
     Date filter is always appended.
     """
     parts: list[str] = []
 
     if config.categories:
-        cats = "+OR+".join(f"cat:{c}" for c in config.categories)
-        parts.append(f"%28{cats}%29")
+        cats = " OR ".join(f"cat:{c}" for c in config.categories)
+        parts.append(f"({cats})")
 
     if config.keyword_queries:
-        kws = "+OR+".join(f"all:%22{kw.replace(' ', '+')}%22" for kw in config.keyword_queries)
-        parts.append(f"%28{kws}%29")
+        kws = " OR ".join(f'all:"{kw}"' for kw in config.keyword_queries)
+        parts.append(f"({kws})")
 
-    query = "+AND+".join(parts) if parts else "all:*"
+    query = " AND ".join(parts) if parts else "all:*"
 
     # Date range in YYYYMMDDHHMM format (GMT)
     start_str = start_date.strftime("%Y%m%d%H%M")
     end_str = end_date.strftime("%Y%m%d%H%M")
-    query += f"+AND+submittedDate:[{start_str}+TO+{end_str}]"
+    query += f" AND submittedDate:[{start_str} TO {end_str}]"
 
     return query
 

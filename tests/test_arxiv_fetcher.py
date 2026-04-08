@@ -144,7 +144,7 @@ class TestBuildQuery:
             datetime(2024, 1, 1, tzinfo=timezone.utc),
             datetime(2024, 1, 8, tzinfo=timezone.utc),
         )
-        assert "cat:cs.SD+OR+cat:eess.AS" in q
+        assert "cat:cs.SD OR cat:eess.AS" in q
         assert "all:" not in q
         assert "submittedDate:" in q
 
@@ -154,7 +154,7 @@ class TestBuildQuery:
             datetime(2024, 1, 1, tzinfo=timezone.utc),
             datetime(2024, 1, 8, tzinfo=timezone.utc),
         )
-        assert "all:%22music+generation%22" in q
+        assert 'all:"music generation"' in q
         assert "cat:" not in q
 
     def test_categories_and_keywords(self) -> None:
@@ -164,8 +164,8 @@ class TestBuildQuery:
             datetime(2024, 1, 8, tzinfo=timezone.utc),
         )
         assert "cat:cs.SD" in q
-        assert "all:%22audio%22" in q
-        assert "+AND+" in q
+        assert 'all:"audio"' in q
+        assert " AND " in q
 
     def test_date_range_format(self) -> None:
         q = build_query(
@@ -173,7 +173,7 @@ class TestBuildQuery:
             datetime(2024, 1, 1, 6, 0, tzinfo=timezone.utc),
             datetime(2024, 1, 8, 18, 30, tzinfo=timezone.utc),
         )
-        assert "submittedDate:[202401010600+TO+202401081830]" in q
+        assert "submittedDate:[202401010600 TO 202401081830]" in q
 
 
 class TestComputeDateRange:
