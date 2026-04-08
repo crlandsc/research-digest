@@ -223,7 +223,7 @@ Every code change must include corresponding tests. Tests are the primary safegu
 - CI runs all tests on every push to main (`.github/workflows/tests.yml`)
 
 **Current coverage:**
-- 115 tests across 8 test files
+- 132 tests across 8 test files
 - `pytest` runs in <1 second
 
 ## Deployment

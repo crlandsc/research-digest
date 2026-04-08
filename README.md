@@ -10,7 +10,9 @@ Built for personal use but designed to be reusable. The default configuration ta
 - Scores and ranks papers using a deterministic point system
 - Generates concise newsletter-style summaries via Google Gemini (free tier)
 - Groups papers by topic in a clean HTML email
+- Extracts resource links — Code, Model, Demo, Dataset, Colab — from paper metadata
 - Delivers automatically on weekday mornings via GitHub Actions
+- CI runs 132 tests on every push
 - Works locally as a CLI with no required API keys (LLM and email are optional)
 
 ## Quickstart
@@ -74,7 +76,7 @@ Output is written to `output/<YYYY-MM-DD>/digest.md`.
 ### Run tests
 
 ```bash
-pytest          # 115 tests
+pytest          # 132 tests
 ```
 
 Tests run automatically on every push to main via GitHub Actions CI. All tests are offline — no API keys or network access needed. Before pushing any changes, run `pytest` locally to verify nothing is broken.
@@ -122,8 +124,9 @@ The included GitHub Actions workflow delivers the digest every weekday morning:
 2. **Store** — persists paper metadata in local SQLite for deduplication
 3. **Rank** — scores each paper: +10 per category match, +15 per keyword in title, +5 in abstract, +10 for recency
 4. **Summarize** — extractive (first 3 sentences) or LLM-generated (Gemini)
-5. **Build** — generates Markdown digest, groups papers by topic
-6. **Deliver** — optional HTML email via Gmail SMTP
+5. **Extract links** — finds Code, Model, Demo, Dataset, Colab URLs in paper metadata
+6. **Build** — generates Markdown digest, groups papers by topic
+7. **Deliver** — optional HTML email via Gmail SMTP
 
 ## Repository layout
 
@@ -141,7 +144,7 @@ src/research_digest/
   summarization/        — LLM provider abstraction (Gemini, extractive)
   delivery/             — email provider abstraction (Gmail SMTP)
   rendering/            — Markdown and HTML email renderers
-tests/                  — 112 pytest tests
+tests/                  — 132 pytest tests
 config/                 — topic configuration (YAML)
 .github/workflows/      — GitHub Actions cron workflow
 ```

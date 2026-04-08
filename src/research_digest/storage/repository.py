@@ -21,8 +21,8 @@ class PaperRepository:
         cursor = self.conn.execute(
             """INSERT OR IGNORE INTO papers
                (source, external_id, title, authors, abstract, categories,
-                published_at, updated_at, canonical_url, pdf_url, code_url)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                published_at, updated_at, canonical_url, pdf_url, code_url, resource_links)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 paper.source,
                 paper.external_id,
@@ -35,6 +35,7 @@ class PaperRepository:
                 paper.canonical_url,
                 paper.pdf_url,
                 paper.code_url,
+                json.dumps(paper.resource_links),
             ),
         )
         self.conn.commit()
@@ -54,8 +55,8 @@ class PaperRepository:
             cursor = self.conn.execute(
                 """INSERT OR IGNORE INTO papers
                    (source, external_id, title, authors, abstract, categories,
-                    published_at, updated_at, canonical_url, pdf_url, code_url)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    published_at, updated_at, canonical_url, pdf_url, code_url, resource_links)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     paper.source,
                     paper.external_id,
@@ -68,6 +69,7 @@ class PaperRepository:
                     paper.canonical_url,
                     paper.pdf_url,
                     paper.code_url,
+                    json.dumps(paper.resource_links),
                 ),
             )
             if cursor.rowcount > 0:
@@ -203,6 +205,7 @@ class PaperRepository:
             canonical_url=row["canonical_url"],
             pdf_url=row["pdf_url"],
             code_url=row["code_url"] if "code_url" in row.keys() else None,
+            resource_links=json.loads(row["resource_links"]) if "resource_links" in row.keys() and row["resource_links"] else {},
         )
 
     @staticmethod

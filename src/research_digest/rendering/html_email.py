@@ -49,7 +49,7 @@ _EMAIL_TEMPLATE = Template(
 <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:13px; color:#999; margin:0 0 {{ '28px' if not loop.last else '0' }};">
   <a href="{{ entry.paper.canonical_url }}" style="color:#2563eb; text-decoration:none;">Abstract</a>
   {% if entry.paper.pdf_url %}&nbsp;&middot;&nbsp;<a href="{{ entry.paper.pdf_url }}" style="color:#2563eb; text-decoration:none;">PDF</a>{% endif %}
-  {% if entry.paper.code_url %}&nbsp;&middot;&nbsp;<a href="{{ entry.paper.code_url }}" style="color:#2563eb; text-decoration:none;">Code</a>{% endif %}
+  {% for label, url in entry.resource_links.items() %}&nbsp;&middot;&nbsp;<a href="{{ url }}" style="color:#2563eb; text-decoration:none;">{{ label }}</a>{% endfor %}
   &nbsp;&middot;&nbsp;{{ entry.category_labels | join(', ') }}
 </p>
 {% if not loop.last %}
@@ -95,6 +95,8 @@ _TEXT_TEMPLATE = Template(
 {{ entry.abstract_excerpt or '' }}
 {{ entry.paper.canonical_url }}
 {% if entry.paper.pdf_url %}{{ entry.paper.pdf_url }}{% endif %}
+{% for label, url in entry.resource_links.items() %}{{ label }}: {{ url }}
+{% endfor %}
 
 {% endfor %}
 {% endfor %}
@@ -125,12 +127,14 @@ def render_email(
 
     # Jinja can't access private attrs, so we use a filter
     class _EntryProxy:
-        """Wraps DigestEntry to add category_labels for template access."""
+        """Wraps DigestEntry to add category_labels and resource_links for template."""
         def __init__(self, entry: DigestEntry):
             self._entry = entry
         def __getattr__(self, name: str):
             if name == "category_labels":
                 return [category_label(c) for c in self._entry.paper.categories]
+            if name == "resource_links":
+                return self._entry.paper.resource_links
             return getattr(self._entry, name)
 
     proxied_groups = OrderedDict()

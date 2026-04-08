@@ -7,6 +7,7 @@ import pytest
 from research_digest.config import ArxivSourceConfig
 from research_digest.fetchers.arxiv import (
     _extract_code_url,
+    _extract_resource_links,
     build_query,
     compute_date_range,
     parse_arxiv_response,
@@ -179,6 +180,56 @@ class TestCodeUrlExtraction:
 
     def test_strips_trailing_period(self) -> None:
         assert _extract_code_url("Code: https://github.com/user/repo.") == "https://github.com/user/repo"
+
+
+class TestResourceLinks:
+    def test_hf_model(self) -> None:
+        _, links = _extract_resource_links("Weights at https://huggingface.co/org/model-name")
+        assert links["Model"] == "https://huggingface.co/org/model-name"
+
+    def test_hf_space(self) -> None:
+        _, links = _extract_resource_links("Demo: https://huggingface.co/spaces/org/demo-app")
+        assert links["Demo"] == "https://huggingface.co/spaces/org/demo-app"
+
+    def test_hf_dataset(self) -> None:
+        _, links = _extract_resource_links("Data at https://huggingface.co/datasets/org/dataset")
+        assert links["Dataset"] == "https://huggingface.co/datasets/org/dataset"
+
+    def test_colab(self) -> None:
+        _, links = _extract_resource_links("Notebook: https://colab.research.google.com/github/user/repo/blob/main/demo.ipynb")
+        assert "Colab" in links
+
+    def test_replicate(self) -> None:
+        _, links = _extract_resource_links("Try it: https://replicate.com/org/model")
+        assert links["Demo"] == "https://replicate.com/org/model"
+
+    def test_zenodo(self) -> None:
+        _, links = _extract_resource_links("Dataset: https://zenodo.org/records/3553088")
+        assert links["Dataset"] == "https://zenodo.org/records/3553088"
+
+    def test_multiple_resources(self) -> None:
+        text = "Code: https://github.com/user/repo. Model: https://huggingface.co/user/model. Demo: https://huggingface.co/spaces/user/app"
+        code_url, links = _extract_resource_links(text)
+        assert code_url == "https://github.com/user/repo"
+        assert "Code" in links
+        assert "Model" in links
+        assert "Demo" in links
+
+    def test_no_resources(self) -> None:
+        _, links = _extract_resource_links("No URLs in this text.")
+        assert links == {}
+
+    def test_hf_space_not_model(self) -> None:
+        """HF spaces URL should be Demo, not Model."""
+        _, links = _extract_resource_links("https://huggingface.co/spaces/org/app")
+        assert "Demo" in links
+        assert "Model" not in links
+
+    def test_hf_dataset_not_model(self) -> None:
+        """HF datasets URL should be Dataset, not Model."""
+        _, links = _extract_resource_links("https://huggingface.co/datasets/org/data")
+        assert "Dataset" in links
+        assert "Model" not in links
 
 
 class TestBuildQuery:

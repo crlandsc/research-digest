@@ -12,8 +12,10 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M5: LLM summarization (Gemini 2.5 Flash Lite via provider abstraction)
 - M5: email delivery (Gmail SMTP with newsletter-style HTML)
 - M5: topic grouping (papers grouped by keyword category in email)
+- M5: resource links (Code, Model, Demo, Dataset, Colab from arXiv comment/abstract)
 - M5: scheduling (GitHub Actions weekday cron at 8am ET)
-- 112 tests all passing
+- M5: CI workflow (tests run on every push to main)
+- 132 tests all passing
 
 ## Working commands
 - `research-digest run` — full pipeline (fetch + rank + build)

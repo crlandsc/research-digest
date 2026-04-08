@@ -24,7 +24,17 @@ MAX_RESULTS_PER_PAGE = 2000
 USER_AGENT = "research-digest/0.1.0 (local CLI tool)"
 
 _VERSION_RE = re.compile(r"v\d+$")
-_CODE_URL_RE = re.compile(r"https?://(?:github\.com|gitlab\.com|bitbucket\.org)/[^\s,;)}\]\"'<>]+", re.IGNORECASE)
+
+# Resource link patterns — order matters (more specific patterns first)
+_RESOURCE_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("Demo", re.compile(r"https?://huggingface\.co/spaces/[^\s,;)}\]\"'<>]+", re.IGNORECASE)),
+    ("Dataset", re.compile(r"https?://huggingface\.co/datasets/[^\s,;)}\]\"'<>]+", re.IGNORECASE)),
+    ("Dataset", re.compile(r"https?://zenodo\.org/records?/[^\s,;)}\]\"'<>]+", re.IGNORECASE)),
+    ("Model", re.compile(r"https?://huggingface\.co/(?!spaces/|datasets/|docs/|blog/|papers/)[^\s,;)}\]\"'<>]+", re.IGNORECASE)),
+    ("Demo", re.compile(r"https?://replicate\.com/[^\s,;)}\]\"'<>]+", re.IGNORECASE)),
+    ("Colab", re.compile(r"https?://colab\.research\.google\.com/[^\s,;)}\]\"'<>]+", re.IGNORECASE)),
+    ("Code", re.compile(r"https?://(?:github\.com|gitlab\.com|bitbucket\.org)/[^\s,;)}\]\"'<>]+", re.IGNORECASE)),
+]
 
 
 def build_query(
@@ -249,9 +259,9 @@ def _entry_to_paper(entry: ET.Element) -> Paper:
             pdf_url = link.get("href")
             break
 
-    # Extract code URL from comment or abstract
+    # Extract code URL and resource links from comment and abstract
     comment = _text(entry, "arxiv:comment")
-    code_url = _extract_code_url(comment, abstract)
+    code_url, resource_links = _extract_resource_links(comment, abstract)
 
     return Paper(
         source="arxiv",
@@ -265,17 +275,38 @@ def _entry_to_paper(entry: ET.Element) -> Paper:
         canonical_url=canonical_url,
         pdf_url=pdf_url,
         code_url=code_url,
+        resource_links=resource_links,
     )
+
+
+def _extract_resource_links(*texts: str) -> tuple[str | None, dict[str, str]]:
+    """Extract code URL and resource links from text fields.
+
+    Returns (code_url, resource_links) where resource_links maps labels to URLs.
+    Searches comment first, then abstract. Each pattern only matches once
+    (first occurrence). Labels: Code, Model, Demo, Dataset, Colab.
+    """
+    combined = " ".join(texts)
+    code_url = None
+    links: dict[str, str] = {}
+
+    for label, pattern in _RESOURCE_PATTERNS:
+        if label in links:
+            continue  # only first match per label
+        match = pattern.search(combined)
+        if match:
+            url = match.group(0).rstrip(".")
+            links[label] = url
+            if label == "Code" and code_url is None:
+                code_url = url
+
+    return (code_url, links)
 
 
 def _extract_code_url(*texts: str) -> str | None:
     """Find the first GitHub/GitLab/Bitbucket URL in any of the given texts."""
-    for text in texts:
-        match = _CODE_URL_RE.search(text)
-        if match:
-            url = match.group(0).rstrip(".")
-            return url
-    return None
+    code_url, _ = _extract_resource_links(*texts)
+    return code_url
 
 
 def _text(element: ET.Element, tag: str) -> str:

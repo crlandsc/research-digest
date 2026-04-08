@@ -19,6 +19,7 @@ class Paper(BaseModel):
     canonical_url: str
     pdf_url: str | None = None
     code_url: str | None = None
+    resource_links: dict[str, str] = {}  # label -> URL (e.g., "Model": "https://huggingface.co/...")
 
 
 class ScoredPaper(BaseModel):
