@@ -59,6 +59,18 @@ class TestHtmlEmail:
         html, _ = render_email(entries, cfg)
         assert "newsletter-style summary" in html
 
+    def test_html_narrow_layout(self) -> None:
+        entries = [_entry(1)]
+        cfg = AppConfig()
+        html, _ = render_email(entries, cfg)
+        assert "max-width: 520px" in html
+
+    def test_html_title_is_linked(self) -> None:
+        entries = [_entry(1)]
+        cfg = AppConfig()
+        html, _ = render_email(entries, cfg)
+        assert '<a href="http://arxiv.org/abs/2401.00001">Test Paper 1</a>' in html
+
 
 class TestGmailProvider:
     def test_missing_from_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
