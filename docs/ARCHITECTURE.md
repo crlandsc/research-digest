@@ -205,8 +205,18 @@ If deployment work begins later, it should be introduced after:
 ## External service posture
 
 For current scope:
-- arXiv is the only expected external data source
+- arXiv is the only required external data source for the MVP
 - no LLM provider should be required for first usefulness
 - no email provider should be required for first usefulness
+
+Planned source expansion, especially for music/audio AI/ML, may later include:
+- ISMIR conference proceedings
+- TISMIR
+- DCASE workshop and challenge outputs
+- MIREX evaluation results
+- ICASSP proceedings
+- IEEE/ACM TASLP
+
+These sources should be added only after the arXiv-only local pipeline works end-to-end.
 
 If a later implementation step requires consulting current provider docs or APIs, Claude should verify those at implementation time and then document the exact manual step in `docs/MANUAL_STEPS.md`.

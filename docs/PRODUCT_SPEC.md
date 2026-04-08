@@ -75,12 +75,20 @@ For v1:
 - source = arXiv only
 
 Future possible sources:
-- Semantic Scholar
-- bioRxiv
-- SSRN
-- conference feeds
+- ISMIR conference proceedings
+- TISMIR
+- DCASE workshop and challenge outputs
+- MIREX evaluation results
+- ICASSP proceedings
+- IEEE/ACM TASLP
+- Semantic Scholar metadata enrichment
 
 These future sources should not complicate the initial implementation.
+
+Notes:
+- If the project remains general-purpose, arXiv stays the only required MVP source.
+- If the project becomes explicitly focused on music/audio AI/ML, the first recommended source to add after arXiv is ISMIR.
+- Benchmark and evaluation sources such as DCASE and MIREX are valuable additions for audio and music tasks, but are not required for the first useful local version.
 
 ## Primary workflow
 

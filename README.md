@@ -62,6 +62,21 @@ For the first useful version:
 - summarization: extractive/by-abstract is acceptable
 - LLM enhancement: optional, not required for the first working version
 
+## Future source expansion
+
+The MVP intentionally stays arXiv-only.
+
+If the project later expands with a music/audio AI/ML focus, the preferred next sources are expected to include:
+- ISMIR conference proceedings
+- TISMIR
+- DCASE workshop and challenge outputs
+- MIREX evaluation results
+- ICASSP proceedings
+- IEEE/ACM TASLP
+- Semantic Scholar metadata enrichment
+
+These future sources should be added only after the arXiv-only local pipeline works end-to-end.
+
 ## Human quickstart
 
 1. Paste these files into the repo.

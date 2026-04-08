@@ -71,6 +71,12 @@ This file records decisions that should survive across sessions.
 - Decision: Deployment and scheduled automation are postponed until after the local workflow works end-to-end.
 - Rationale: The current priority is correctness and usefulness, not hosting.
 
+## D-011
+- Date: 2026-04-08
+- Status: Accepted
+- Decision: The MVP remains arXiv-only, but if the project is focused on music/audio AI/ML, the preferred expansion order is ISMIR/TISMIR first, then DCASE and MIREX, then broader audio venues such as ICASSP and IEEE/ACM TASLP.
+- Rationale: This keeps the first implementation simple while aligning future source expansion with the most relevant domain venues and evaluation ecosystems.
+
 ---
 
 ## Instructions for future updates

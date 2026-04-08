@@ -45,6 +45,7 @@ This file is the prioritized build backlog.
 - [ ] Add optional email/slack delivery
 - [ ] Add optional scheduling
 - [ ] Add optional deployment path
+- [ ] Design source adapters for future music/audio venues (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP)
 
 ## Prioritization rule
 
