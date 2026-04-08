@@ -33,7 +33,7 @@ The implementation scaffold and application code are expected to be created by C
 
 - `README.md` — human-facing project overview
 - `CLAUDE.md` — operating instructions for Claude Code
-- `.env.example` — example environment variables; never commit real secrets
+- `env.example` — example environment variables; never commit real secrets
 - `config/topics.example.yaml` — example topic/filter configuration
 - `docs/PRODUCT_SPEC.md` — product goals, MVP scope, non-goals
 - `docs/ARCHITECTURE.md` — preferred technical direction and target structure

@@ -17,7 +17,7 @@ Read these files before making implementation decisions:
 5. `docs/TASKS.md`
 6. `docs/MANUAL_STEPS.md`
 7. `docs/STATE.md`
-8. `.env.example`
+8. `env.example`
 9. `config/topics.example.yaml`
 
 If these documents conflict, do not guess silently. Propose a minimal correction and then continue once the direction is clear.
