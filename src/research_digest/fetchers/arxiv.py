@@ -85,11 +85,15 @@ def fetch_papers(
     max_to_fetch = config.max_results_per_run
     page_size = min(MAX_RESULTS_PER_PAGE, max_to_fetch)
 
-    logger.info("arXiv query: %s", query)
+    logger.info("arXiv query (%d categories, %d keywords): %s",
+                len(config.categories), len(config.keyword_queries), query)
+    logger.info("arXiv URL: %s", ARXIV_API_URL)
+    logger.info("Max results: %d, page size: %d", max_to_fetch, page_size)
 
     with httpx.Client(
         headers={"User-Agent": USER_AGENT},
-        timeout=60.0,
+        timeout=90.0,
+        follow_redirects=True,
     ) as client:
         while start < max_to_fetch:
             params = {
@@ -99,9 +103,11 @@ def fetch_papers(
                 "sortBy": "submittedDate",
                 "sortOrder": "descending",
             }
-            logger.debug("Fetching page start=%d", start)
+            logger.info("Fetching page start=%d", start)
             response = _request_with_retry(client, params)
+            logger.info("Response: HTTP %d, %d bytes", response.status_code, len(response.text))
             papers, total = parse_arxiv_response(response.text)
+            logger.info("Parsed %d papers from page (total available: %d)", len(papers), total)
 
             if not papers:
                 break
@@ -125,32 +131,65 @@ def _request_with_retry(
     params: dict[str, str],
     max_retries: int = 4,
 ) -> httpx.Response:
-    """Make request with exponential backoff on 429/503.
+    """Make request with exponential backoff on 429/503/timeout.
 
     GH Actions shared IPs are commonly rate limited by arXiv,
     so we use aggressive waits: 30s, 60s, 90s, 120s.
     """
     backoff_base = 30
+    url = httpx.URL(ARXIV_API_URL).copy_merge_params(params)
+    logger.info("Request URL (first 200 chars): %s", str(url)[:200])
+
     for attempt in range(max_retries + 1):
+        attempt_label = f"attempt {attempt + 1}/{max_retries + 1}"
+        logger.info("arXiv request %s starting...", attempt_label)
+        start_time = time.monotonic()
         try:
             response = client.get(ARXIV_API_URL, params=params)
         except httpx.ReadTimeout:
+            elapsed = time.monotonic() - start_time
+            logger.error("arXiv request %s timed out after %.1fs", attempt_label, elapsed)
             if attempt < max_retries:
                 wait = backoff_base * (attempt + 1)
-                logger.warning("arXiv request timed out, retrying in %ds (attempt %d/%d)...",
-                               wait, attempt + 1, max_retries)
+                logger.warning("Retrying in %ds...", wait)
+                time.sleep(wait)
+                continue
+            logger.error("All %d retries exhausted (timeout). arXiv may be rate limiting this IP.", max_retries + 1)
+            raise
+        except httpx.ConnectError as e:
+            elapsed = time.monotonic() - start_time
+            logger.error("arXiv connection error %s after %.1fs: %s", attempt_label, elapsed, e)
+            if attempt < max_retries:
+                wait = backoff_base * (attempt + 1)
+                logger.warning("Retrying in %ds...", wait)
                 time.sleep(wait)
                 continue
             raise
+
+        elapsed = time.monotonic() - start_time
+        logger.info("arXiv response %s: HTTP %d in %.1fs, headers: %s",
+                     attempt_label, response.status_code, elapsed,
+                     {k: v for k, v in response.headers.items()
+                      if k.lower() in ("retry-after", "x-ratelimit-remaining", "x-cache", "server", "content-type")})
+
         if response.status_code in (429, 503) and attempt < max_retries:
-            wait = int(response.headers.get("Retry-After", backoff_base * (attempt + 1)))
-            logger.warning("arXiv returned %d, retrying in %ds (attempt %d/%d)...",
-                           response.status_code, wait, attempt + 1, max_retries)
+            retry_after = response.headers.get("Retry-After")
+            wait = int(retry_after) if retry_after else backoff_base * (attempt + 1)
+            body_preview = response.text[:200] if response.text else "(empty)"
+            logger.warning("arXiv returned %d. Retry-After header: %s. Body: %s. Waiting %ds...",
+                           response.status_code, retry_after, body_preview, wait)
             time.sleep(wait)
             continue
+
+        if response.status_code != 200:
+            logger.error("arXiv unexpected status %d. Body: %s",
+                         response.status_code, response.text[:500])
+
         response.raise_for_status()
         return response
-    raise RuntimeError("unreachable")
+
+    logger.error("All %d retries exhausted. Last status: rate limited by arXiv.", max_retries + 1)
+    raise RuntimeError(f"arXiv API failed after {max_retries + 1} attempts")
 
 
 def parse_arxiv_response(xml_text: str) -> tuple[list[Paper], int]:
