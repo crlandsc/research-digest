@@ -34,10 +34,10 @@ This file is the prioritized build backlog.
 - [x] Add one-command local run path
 
 ## Milestone 4 — usability hardening
-- [ ] Improve CLI ergonomics
-- [ ] Improve failure messages
-- [ ] Add fixture-based tests
-- [ ] Add sample local workflow docs
+- [x] Improve CLI ergonomics
+- [x] Improve failure messages
+- [x] Add fixture-based tests
+- [x] Add sample local workflow docs (covered by README quickstart)
 
 ## Milestone 5 — optional enhancements
 - [ ] Add optional LLM summarization abstraction
