@@ -52,7 +52,7 @@ class GeminiProvider(SummarizationProvider):
         results: dict[str, str] = {}
         for i, paper in enumerate(papers):
             if i > 0:
-                time.sleep(1)
+                time.sleep(7)  # stay under 10 RPM free tier limit
             try:
                 summary = self.summarize_paper(paper)
                 results[paper.external_id] = summary
