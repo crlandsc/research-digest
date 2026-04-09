@@ -114,12 +114,12 @@ The included GitHub Actions workflow delivers the digest every weekday morning:
   - `GMAIL_APP_PASSWORD`
   - `EMAIL_FROM`
   - `EMAIL_TO`
-3. The workflow runs at ~8:07am ET Mon-Fri automatically
+3. The workflow runs at ~8:05am ET Mon-Fri automatically
    - Monday covers Saturday + Sunday (3-day lookback)
    - Tuesday-Friday covers the previous day (1-day lookback)
 4. You can also trigger manually from the Actions tab
 
-**Note:** GitHub Actions cron can be delayed 10-60+ minutes during high load, and scheduled at :07 to avoid top-of-hour congestion ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)). If a digest doesn't arrive, check the Actions tab and trigger manually.
+**Note:** GitHub Actions cron can be delayed 10-60+ minutes during high load, and scheduled at :05 to avoid top-of-hour congestion ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)). If a digest doesn't arrive, check the Actions tab and trigger manually.
 
 ## How it works
 

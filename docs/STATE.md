@@ -27,14 +27,14 @@ Milestone 5 — complete. All core features implemented and deployed.
 
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
-- Schedule: weekdays 12:07 UTC (~8:07am EDT / ~7:07am EST)
+- Schedule: weekdays 12:05 UTC (~8:05am EDT / ~7:05am EST)
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
 
 ### Known GitHub Actions cron limitations
 - Scheduled runs can be delayed 10-60+ minutes during high load ([docs](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule))
-- Jobs scheduled at the top of the hour (:00) are most affected; we use :07 offset to reduce this
+- Jobs scheduled at the top of the hour (:00) are most affected; we use :05 offset to reduce this
 - Missed jobs may not be retried ([discussion](https://github.com/orgs/community/discussions/27130))
 - Scheduled workflows are auto-disabled after 60 days of no repo activity on public repos
 - If a digest doesn't arrive, trigger manually from the Actions tab
