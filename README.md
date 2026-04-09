@@ -46,6 +46,7 @@ cp config/topics.example.yaml config/topics.yaml
 ```
 
 Edit `config/topics.yaml` to match your interests:
+
 - **categories** — arXiv category codes (e.g., `cs.SD`, `cs.LG`, `eess.AS`)
 - **keyword_queries** — search phrases (combined with categories via AND)
 - **keyword_groups** — maps keywords to named topic sections in the digest
@@ -96,11 +97,11 @@ To receive the digest via email:
 
 1. Create a [Gmail App Password](https://myaccount.google.com/apppasswords) (requires 2FA)
 2. Add to `.env`:
-   ```
+  ```
    EMAIL_FROM=you@gmail.com
    EMAIL_TO=you@gmail.com
    GMAIL_APP_PASSWORD=your_16_char_password
-   ```
+  ```
 3. Run with email: `research-digest run --send-email`
 
 ## Optional: Automated daily delivery
@@ -109,14 +110,16 @@ The included GitHub Actions workflow delivers the digest every weekday morning:
 
 1. Push this repo to GitHub
 2. Add repository secrets (Settings > Secrets > Actions):
-   - `GEMINI_API_KEY`
-   - `GMAIL_APP_PASSWORD`
-   - `EMAIL_FROM`
-   - `EMAIL_TO`
-3. The workflow runs at 8am ET Mon-Fri automatically
+  - `GEMINI_API_KEY`
+  - `GMAIL_APP_PASSWORD`
+  - `EMAIL_FROM`
+  - `EMAIL_TO`
+3. The workflow runs at ~8:07am ET Mon-Fri automatically
    - Monday covers Saturday + Sunday (3-day lookback)
    - Tuesday-Friday covers the previous day (1-day lookback)
 4. You can also trigger manually from the Actions tab
+
+**Note:** GitHub Actions cron can be delayed 10-60+ minutes during high load, and scheduled at :07 to avoid top-of-hour congestion ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)). If a digest doesn't arrive, check the Actions tab and trigger manually.
 
 ## How it works
 
