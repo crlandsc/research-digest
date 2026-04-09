@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "research-digest"
-version = "0.1.2"
+dynamic = ["version"]
 description = "Local-first research digest generator"
 requires-python = ">=3.12"
 dependencies = [
@@ -24,6 +24,9 @@ dev = [
     "pytest>=8,<9",
     "pytest-cov>=5,<6",
 ]
+
+[tool.hatch.version]
+path = "src/research_digest/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/research_digest"]
