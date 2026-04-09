@@ -11,7 +11,7 @@ from research_digest.summarization.base import SummarizationProvider
 
 logger = logging.getLogger(__name__)
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent"
 
 _SYSTEM_PROMPT = """\
 You write concise research paper summaries for a daily email digest read by \
@@ -52,7 +52,7 @@ class GeminiProvider(SummarizationProvider):
         results: dict[str, str] = {}
         for i, paper in enumerate(papers):
             if i > 0:
-                time.sleep(7)  # stay under 10 RPM free tier limit
+                time.sleep(4)  # stay under 15 RPM free tier limit
             try:
                 summary = self.summarize_paper(paper)
                 results[paper.external_id] = summary
