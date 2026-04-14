@@ -42,6 +42,9 @@ This file is the prioritized build backlog.
 ## Milestone 5 — optional enhancements
 - [x] Add optional LLM summarization abstraction
 - [x] Add provider-backed summarization implementation (Gemini Flash)
+- [x] Add 5-model fallback chain for summarization reliability
+- [x] Add summary attribution (model name per digest entry)
+- [x] Add thinking model support (Gemini 3, Gemma 4)
 - [x] Add optional email delivery (Gmail SMTP)
 - [x] Add optional scheduling (GitHub Actions, weekdays 8am ET)
 - [x] Add optional deployment path (GitHub Actions workflow)

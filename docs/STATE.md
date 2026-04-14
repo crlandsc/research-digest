@@ -9,11 +9,13 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
 - M3: ranking and digest generation (scoring, filters, Markdown renderer)
 - M4: usability hardening (CLI ergonomics, status command, edge case tests)
-- M5: LLM summarization (Gemini 2.5 Flash Lite via provider abstraction)
+- M5: LLM summarization (5-model fallback chain: Gemini 3 Flash → 3.1 Flash Lite → Gemma 4 31B → 2.5 Flash → 2.5 Flash Lite)
 - M5: email delivery (Gmail SMTP with newsletter-style HTML)
 - M5: topic grouping (papers grouped by keyword category in email)
 - M5: resource links (Code, Model, Demo, Dataset, Colab from arXiv comment/abstract)
-- M5: scheduling (GitHub Actions weekday cron at 8am ET)
+- M5: summary attribution (model name shown per entry in digest)
+- M5: thinking model support (filters thought parts from Gemini 3 / Gemma 4 responses)
+- M5: scheduling (GitHub Actions weekday cron at 6am ET, shifted for delay buffer)
 - M5: CI workflow (tests run on every push to main)
 - 132 tests all passing
 
@@ -27,7 +29,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
-- Schedule: weekdays 12:05 UTC (~8:05am EDT / ~7:05am EST)
+- Schedule: weekdays 10:05 UTC (~6:05am EDT / ~5:05am EST)
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
@@ -43,4 +45,4 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
-2026-04-08
+2026-04-14

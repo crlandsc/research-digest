@@ -143,6 +143,18 @@ This file records decisions that should survive across sessions.
 - Decision: Non-arXiv source adapters (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP) deferred indefinitely.
 - Rationale: Most papers from these venues are posted to arXiv (cs.SD, eess.AS) before or around publication. Adding scrapers for conference websites would require significant maintenance for marginal coverage gain. Revisit only if specific papers are consistently being missed.
 
+## D-023
+- Date: 2026-04-14
+- Status: Accepted
+- Decision: Summarization uses a 5-model fallback chain ordered by quality benchmarks, not a single model.
+- Rationale: Preview models (gemini-3.1-flash-lite-preview) experience frequent 503 outages. Cascading through multiple free-tier models (gemini-3-flash-preview → gemini-3.1-flash-lite-preview → gemma-4-31b-it → gemini-2.5-flash → gemini-2.5-flash-lite) maximizes reliability at zero cost. Each model gets 2 retries before fallback. Extractive summary is the final fallback.
+
+## D-024
+- Date: 2026-04-14
+- Status: Accepted
+- Decision: Each digest entry shows which model produced its summary (or notes it was not summarized).
+- Rationale: Makes it immediately clear at a glance whether LLM summarization succeeded or fell back to extractive. Displayed as fine print below each summary in markdown, HTML email, and plaintext.
+
 ---
 
 ## Instructions for future updates
