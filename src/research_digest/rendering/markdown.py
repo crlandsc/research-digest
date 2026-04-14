@@ -32,6 +32,11 @@ _TEMPLATE = Template(
 {% if entry.abstract_excerpt %}
 
 > {{ entry.abstract_excerpt }}
+{% if entry.summary_source and entry.summary_source != 'extractive' %}
+_Summarized by {{ entry.summary_source }}_
+{% elif entry.summary_source == 'extractive' %}
+_Abstract excerpt (not summarized)_
+{% endif %}
 {% endif %}
 {% if entry.reason %}
 

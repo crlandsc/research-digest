@@ -45,7 +45,12 @@ _EMAIL_TEMPLATE = Template(
 <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:19px; font-weight:700; line-height:1.3; margin:0 0 10px 0;">
   <a href="{{ entry.paper.canonical_url }}" style="color:#111; text-decoration:underline;">{{ entry.paper.title }}</a>
 </p>
-<p style="font-family:Georgia,'Times New Roman',serif; font-size:17px; color:#333; line-height:1.6; margin:0 0 10px 0;">{{ entry.abstract_excerpt or '' }}</p>
+<p style="font-family:Georgia,'Times New Roman',serif; font-size:17px; color:#333; line-height:1.6; margin:0 0 4px 0;">{{ entry.abstract_excerpt or '' }}</p>
+{% if entry.summary_source and entry.summary_source != 'extractive' %}
+<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:11px; color:#bbb; margin:0 0 10px 0;">Summarized by {{ entry.summary_source }}</p>
+{% elif entry.summary_source == 'extractive' %}
+<p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:11px; color:#bbb; margin:0 0 10px 0;">Abstract excerpt (not summarized)</p>
+{% endif %}
 <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:13px; color:#999; margin:0 0 {{ '28px' if not loop.last else '0' }};">
   <a href="{{ entry.paper.canonical_url }}" style="color:#2563eb; text-decoration:none;">Abstract</a>
   {% if entry.paper.pdf_url %}&nbsp;&middot;&nbsp;<a href="{{ entry.paper.pdf_url }}" style="color:#2563eb; text-decoration:none;">PDF</a>{% endif %}
@@ -93,7 +98,9 @@ _TEXT_TEMPLATE = Template(
 {% for entry in group_entries %}
 {{ entry.paper.title }}
 {{ entry.abstract_excerpt or '' }}
-{{ entry.paper.canonical_url }}
+{% if entry.summary_source and entry.summary_source != 'extractive' %}[Summarized by {{ entry.summary_source }}]
+{% elif entry.summary_source == 'extractive' %}[Abstract excerpt]
+{% endif %}{{ entry.paper.canonical_url }}
 {% if entry.paper.pdf_url %}{{ entry.paper.pdf_url }}{% endif %}
 {% for label, url in entry.resource_links.items() %}{{ label }}: {{ url }}
 {% endfor %}

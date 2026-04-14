@@ -36,18 +36,24 @@ def run_build(
     summaries = provider.summarize_papers(papers)
 
     # Re-compute topic groups (not persisted in DB, so get_top_scored defaults to "Other")
-    entries = [
-        DigestEntry(
-            paper=sp.paper,
-            score=sp.score,
-            rank=sp.rank,
-            reason=sp.reason,
-            abstract_excerpt=summaries.get(sp.paper.external_id)
-            or extractive_summary(sp.paper.abstract),
-            topic_group=_determine_topic_group(sp.paper, config),
+    entries = []
+    for sp in scored:
+        result = summaries.get(sp.paper.external_id)
+        if result:
+            excerpt, source = result.text, result.source
+        else:
+            excerpt, source = extractive_summary(sp.paper.abstract), "extractive"
+        entries.append(
+            DigestEntry(
+                paper=sp.paper,
+                score=sp.score,
+                rank=sp.rank,
+                reason=sp.reason,
+                abstract_excerpt=excerpt,
+                summary_source=source,
+                topic_group=_determine_topic_group(sp.paper, config),
+            )
         )
-        for sp in scored
-    ]
 
     total_reviewed = len(repo.get_all_papers())
     content = render_digest(entries, config, run_id, total_reviewed)

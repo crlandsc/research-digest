@@ -45,6 +45,13 @@ class RunRecord(BaseModel):
     digest_path: str | None = None
 
 
+class SummaryResult(BaseModel):
+    """Result of a summarization attempt."""
+
+    text: str
+    source: str  # model name (e.g. "gemini-3-flash-preview") or "extractive"
+
+
 class DigestEntry(BaseModel):
     """Paper prepared for digest rendering."""
 
@@ -53,4 +60,5 @@ class DigestEntry(BaseModel):
     rank: int
     reason: str
     abstract_excerpt: str | None = None
+    summary_source: str | None = None  # which model/method produced the summary
     topic_group: str = "Other"

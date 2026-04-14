@@ -7,7 +7,6 @@ import pytest
 
 from research_digest.config import AppConfig
 from research_digest.models import Paper
-from research_digest.summarization.base import SummarizationProvider
 from research_digest.summarization.extractive import ExtractiveProvider
 from research_digest.summarization.providers import get_provider
 
@@ -28,8 +27,9 @@ class TestExtractiveProvider:
     def test_summarizes_paper(self) -> None:
         provider = ExtractiveProvider()
         result = provider.summarize_paper(_paper())
-        assert "First sentence" in result
-        assert "Fourth" not in result
+        assert "First sentence" in result.text
+        assert "Fourth" not in result.text
+        assert result.source == "extractive"
 
     def test_summarizes_multiple(self) -> None:
         provider = ExtractiveProvider()
@@ -37,6 +37,7 @@ class TestExtractiveProvider:
         results = provider.summarize_papers(papers)
         assert len(results) == 3
         assert all(eid in results for eid in ["p0", "p1", "p2"])
+        assert all(r.source == "extractive" for r in results.values())
 
 
 class TestProviderFactory:
@@ -85,7 +86,8 @@ class TestGeminiProvider:
         with patch.object(provider._client, "post", return_value=mock_response):
             result = provider.summarize_paper(_paper())
 
-        assert result == "A concise summary of the paper."
+        assert result.text == "A concise summary of the paper."
+        assert result.source == "gemini-3-flash-preview"
 
     def test_fallback_on_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
@@ -97,4 +99,5 @@ class TestGeminiProvider:
 
         # Should fall back to extractive
         assert "2401.00001" in results
-        assert "First sentence" in results["2401.00001"]
+        assert "First sentence" in results["2401.00001"].text
+        assert results["2401.00001"].source == "extractive"
