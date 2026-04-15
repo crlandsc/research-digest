@@ -6,12 +6,18 @@ Built for personal use but designed to be forked. The default configuration targ
 
 ## What you get
 
+<p align="center">
+  <img src="docs/digest-example.png" alt="Example digest email" width="400">
+</p>
+
 - A weekday morning email digest with the most relevant papers in your field
 - Concise, newsletter-style summaries via Google Gemini (free tier, no billing required)
 - Papers grouped by topic and ranked by relevance
 - Resource links (Code, Model, Demo, Dataset, Colab) extracted automatically
 - LaTeX math notation rendered as clean Unicode in emails (e.g., `$\beta$` becomes `β`)
 - Works locally as a CLI with no API keys required (LLM and email are optional)
+
+The `keyword_groups` in your config control the topic sections you see in the email (e.g., "Source Separation", "Speech & Voice" above). Papers are automatically sorted into the group whose keywords they match most strongly. Groups appear in the order papers are found, and each paper only appears once.
 
 ## Quickstart
 
