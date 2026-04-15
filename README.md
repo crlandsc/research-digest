@@ -33,10 +33,6 @@ Requires Python 3.12+.
 ### 2. Configure your interests
 
 ```bash
-# Option A: Start from the generic ML/AI template
-cp config/topics.generic.yaml config/topics.yaml
-
-# Option B: Start from the music/audio ML example
 cp config/topics.example.yaml config/topics.yaml
 ```
 
@@ -159,8 +155,7 @@ src/research_digest/
   rendering/            — Markdown, HTML email, LaTeX-to-Unicode conversion
   delivery/             — email delivery (Gmail SMTP)
 config/
-  topics.example.yaml   — music/audio ML configuration (annotated)
-  topics.generic.yaml   — generic ML/AI template (starting point for any field)
+  topics.example.yaml   — annotated template (generic ML/AI, easy to customize)
 tests/                  — 180 pytest tests
 .github/workflows/      — GitHub Actions: daily digest + CI
 ```

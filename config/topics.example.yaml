@@ -1,28 +1,48 @@
 version: 1
 
+# ============================================================================
+# EXAMPLE CONFIG — Customize this for your research interests
+# ============================================================================
+# Copy this file to get started:
+#   cp config/topics.example.yaml config/topics.yaml
+#
+# Then edit the categories, keywords, and topic groups below.
+# The defaults target general ML/AI as a starting point.
+#
+# Finding arXiv categories for your field:
+#   https://arxiv.org/category_taxonomy
+#
+# Common categories by field:
+#   NLP:              cs.CL, cs.AI
+#   Computer Vision:  cs.CV, cs.AI, cs.LG
+#   Robotics:         cs.RO, cs.AI, cs.SY
+#   Audio/Music:      cs.SD, eess.AS, cs.MM
+#   Physics:          cond-mat.str-el, hep-th, quant-ph
+#   Mathematics:      math.AG, math.RA, math.CO
+#   Biology:          q-bio.GN, q-bio.BM
+#   Economics:        econ.GN, econ.TH
+# ============================================================================
+
 sources:
   arxiv:
     enabled: true
-    # arXiv category codes — papers in these categories matching keywords will be fetched
+    # arXiv category codes for your field
     categories:
-      - cs.SD       # Sound
-      - eess.AS     # Audio and Speech Processing
-      - cs.MM       # Multimedia
       - cs.LG       # Machine Learning
       - cs.AI       # Artificial Intelligence
-      - cs.IR       # Information Retrieval
       - cs.CL       # Computation and Language
-      - eess.SP     # Signal Processing
+      - stat.ML     # Machine Learning (Statistics)
 
-    # Keywords combined with categories via AND — only papers matching at least one keyword are returned
-    # Leave empty to fetch all papers in listed categories
+    # Keywords combined with categories via AND
+    # Only papers matching at least one keyword are returned
+    # Leave empty to fetch ALL papers in your categories
     keyword_queries:
-      - "music generation"
-      - "audio synthesis"
-      - "audio classification"
-      - "source separation"
-      - "speech synthesis"
-      - "audio representation learning"
+      - "large language model"
+      - "transformer"
+      - "reinforcement learning"
+      - "diffusion model"
+      - "representation learning"
+      - "fine-tuning"
 
     lookback_days: 7
     max_results_per_run: 200
@@ -47,24 +67,23 @@ digest:
   include_reason_selected: true
   include_links: true
 
-# Maps keywords to named topic sections in the email digest
+# How papers are grouped in the email digest
 # Papers are assigned to the group whose keywords they match most strongly
 keyword_groups:
-  "Music Generation":
-    - "music generation"
-    - "audio synthesis"
-  "Audio Classification":
-    - "audio classification"
-  "Source Separation":
-    - "source separation"
-  "Speech & Voice":
-    - "speech synthesis"
-  "Audio Representations":
-    - "audio representation learning"
+  "Language Models":
+    - "large language model"
+    - "transformer"
+  "Reinforcement Learning":
+    - "reinforcement learning"
+  "Generative Models":
+    - "diffusion model"
+  "Representation Learning":
+    - "representation learning"
+    - "fine-tuning"
 
 summarization:
-  # "extractive" uses first 3 sentences of abstract (no API key needed)
-  # "llm" uses configured provider for concise newsletter-style summaries
+  # "extractive" — first 3 sentences of abstract (no API key needed)
+  # "llm" — concise newsletter-style summaries via Gemini (free tier)
   mode: extractive
-  # "none" for no LLM, "gemini" for Google Gemini Flash (free tier)
+  # "none" or "gemini"
   provider: none
