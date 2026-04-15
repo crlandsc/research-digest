@@ -17,7 +17,8 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M5: thinking model support (filters thought parts from Gemini 3 / Gemma 4 responses)
 - M5: scheduling (GitHub Actions weekday cron at 6am ET, shifted for delay buffer)
 - M5: CI workflow (tests run on every push to main)
-- 132 tests all passing
+- M5: LaTeX-to-Unicode conversion (pylatexenc converts math notation in email titles/summaries)
+- 179 tests all passing
 
 ## Working commands
 - `research-digest run` — full pipeline (fetch + rank + build)
@@ -45,4 +46,4 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
-2026-04-14
+2026-04-15
