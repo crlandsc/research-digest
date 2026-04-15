@@ -110,3 +110,43 @@ class TestGmailProvider:
         mock_smtp_instance.starttls.assert_called_once()
         mock_smtp_instance.login.assert_called_once_with("from@test.com", "testpass")
         mock_smtp_instance.send_message.assert_called_once()
+
+
+class TestLatexInEmail:
+    def test_greek_converted_in_html_title(self) -> None:
+        entry = _entry(1)
+        entry.paper = entry.paper.model_copy(update={
+            "title": r"Audio Separation using $\beta$-divergence",
+        })
+        cfg = AppConfig()
+        html, text = render_email([entry], cfg)
+        assert "\u03b2-divergence" in html
+        assert r"$\beta$" not in html
+        assert "\u03b2-divergence" in text
+        assert r"$\beta$" not in text
+
+    def test_greek_converted_in_abstract_excerpt(self) -> None:
+        entry = _entry(1)
+        entry.abstract_excerpt = r"Leveraging $\beta$-divergence for improved separation."
+        cfg = AppConfig()
+        html, text = render_email([entry], cfg)
+        assert "\u03b2-divergence" in html
+        assert r"$\beta$" not in html
+        assert "\u03b2-divergence" in text
+
+    def test_percent_preserved_in_excerpt(self) -> None:
+        """LLM summaries with % must not be corrupted."""
+        entry = _entry(1)
+        entry.abstract_excerpt = "Achieves 95% accuracy on the test set."
+        cfg = AppConfig()
+        html, text = render_email([entry], cfg)
+        assert "95%" in html
+        assert "accuracy" in html
+        assert "95%" in text
+
+    def test_plain_title_unchanged(self) -> None:
+        entry = _entry(1)
+        cfg = AppConfig()
+        html, text = render_email([entry], cfg)
+        assert "Test Paper 1" in html
+        assert "Test Paper 1" in text

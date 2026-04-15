@@ -9,6 +9,7 @@ from research_digest import __version__
 from research_digest.categories import category_label
 from research_digest.config import AppConfig
 from research_digest.models import DigestEntry
+from research_digest.rendering.latex import latex_to_unicode
 
 
 def _group_entries(entries: list[DigestEntry]) -> dict[str, list[DigestEntry]]:
@@ -133,8 +134,17 @@ def render_email(
     )
 
     # Jinja can't access private attrs, so we use a filter
+    class _PaperProxy:
+        """Wraps Paper to convert LaTeX in title for email rendering."""
+        def __init__(self, paper):
+            self._paper = paper
+        def __getattr__(self, name: str):
+            if name == "title":
+                return latex_to_unicode(self._paper.title)
+            return getattr(self._paper, name)
+
     class _EntryProxy:
-        """Wraps DigestEntry to add category_labels and resource_links for template."""
+        """Wraps DigestEntry to add category_labels, resource_links, and LaTeX conversion."""
         def __init__(self, entry: DigestEntry):
             self._entry = entry
         def __getattr__(self, name: str):
@@ -142,6 +152,10 @@ def render_email(
                 return [category_label(c) for c in self._entry.paper.categories]
             if name == "resource_links":
                 return self._entry.paper.resource_links
+            if name == "paper":
+                return _PaperProxy(self._entry.paper)
+            if name == "abstract_excerpt":
+                return latex_to_unicode(self._entry.abstract_excerpt)
             return getattr(self._entry, name)
 
     proxied_groups = OrderedDict()
