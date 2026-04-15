@@ -101,3 +101,33 @@ class TestGeminiProvider:
         assert "2401.00001" in results
         assert "First sentence" in results["2401.00001"].text
         assert results["2401.00001"].source == "extractive"
+
+    def test_timeout_falls_through_to_next_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Timeout on one model should try the next, not skip to extractive."""
+        monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
+        import httpx as _httpx
+        from research_digest.summarization.gemini import GeminiProvider
+
+        provider = GeminiProvider()
+
+        ok_response = MagicMock()
+        ok_response.status_code = 200
+        ok_response.json.return_value = {
+            "candidates": [{"content": {"parts": [{"text": "Summary from later model."}]}}]
+        }
+
+        call_count = 0
+        def mock_post(url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            # First 3 models timeout, 4th succeeds (gemini-2.5-flash)
+            if call_count <= 3:
+                raise _httpx.ReadTimeout("timed out")
+            return ok_response
+
+        with patch.object(provider._client, "post", side_effect=mock_post):
+            result = provider.summarize_paper(_paper())
+
+        assert result.text == "Summary from later model."
+        assert result.source == "gemini-2.5-flash"
+        assert call_count == 4  # 3 timeouts + 1 success

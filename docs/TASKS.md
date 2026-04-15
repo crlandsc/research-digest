@@ -48,6 +48,7 @@ This file is the prioritized build backlog.
 - [x] Add optional email delivery (Gmail SMTP)
 - [x] Add optional scheduling (GitHub Actions, weekdays 8am ET)
 - [x] Add optional deployment path (GitHub Actions workflow)
+- [x] Add LaTeX-to-Unicode conversion for email digest rendering
 - [ ] Design source adapters for future music/audio venues (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP)
 
 ## Prioritization rule

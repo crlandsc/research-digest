@@ -155,6 +155,12 @@ This file records decisions that should survive across sessions.
 - Decision: Each digest entry shows which model produced its summary (or notes it was not summarized).
 - Rationale: Makes it immediately clear at a glance whether LLM summarization succeeded or fell back to extractive. Displayed as fine print below each summary in markdown, HTML email, and plaintext.
 
+## D-025
+- Date: 2026-04-15
+- Status: Accepted
+- Decision: Convert LaTeX notation to Unicode in email rendering using pylatexenc 2.x. Markdown output retains raw LaTeX (renders natively in GitHub/VS Code). Bare `%` is pre-escaped to prevent pylatexenc from treating it as a LaTeX comment.
+- Rationale: arXiv titles and abstracts contain LaTeX math ($\beta$, $\frac{1}{2}$, etc.) that email clients cannot render. pylatexenc is pure Python, zero runtime deps, ~137 KB, and handles the 90%+ case for arXiv metadata. Conversion applied at render time via _EntryProxy so raw data is preserved in the database.
+
 ---
 
 ## Instructions for future updates
