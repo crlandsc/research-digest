@@ -150,3 +150,71 @@ class TestLatexInEmail:
         html, text = render_email([entry], cfg)
         assert "Test Paper 1" in html
         assert "Test Paper 1" in text
+
+    def test_superscript_in_title(self) -> None:
+        entry = _entry(1)
+        entry.paper = entry.paper.model_copy(update={
+            "title": r"$L^2$ Regularization for Audio Models",
+        })
+        cfg = AppConfig()
+        html, _ = render_email([entry], cfg)
+        assert "L^2 Regularization" in html
+        assert r"$L^2$" not in html
+
+    def test_fraction_in_abstract(self) -> None:
+        entry = _entry(1)
+        entry.abstract_excerpt = r"We use a $\frac{1}{2}$ scaling factor."
+        cfg = AppConfig()
+        html, _ = render_email([entry], cfg)
+        assert "1/2" in html
+        assert r"\frac" not in html
+
+    def test_multiple_latex_expressions(self) -> None:
+        entry = _entry(1)
+        entry.paper = entry.paper.model_copy(update={
+            "title": r"$\alpha$-stable Models with $\beta$-VAE",
+        })
+        entry.abstract_excerpt = r"Combines $\alpha$-stable distributions with $\beta$-VAE."
+        cfg = AppConfig()
+        html, text = render_email([entry], cfg)
+        assert "\u03b1-stable" in html
+        assert "\u03b2-VAE" in html
+        assert "\u03b1-stable" in text
+        assert "\u03b2-VAE" in text
+
+    def test_accented_text_in_abstract(self) -> None:
+        entry = _entry(1)
+        entry.abstract_excerpt = r"Following Schr\"odinger's approach to quantum systems."
+        cfg = AppConfig()
+        html, _ = render_email([entry], cfg)
+        assert "Schr\u00f6dinger" in html
+        assert r'\"o' not in html
+
+    def test_latex_in_title_and_excerpt_together(self) -> None:
+        """Both title and excerpt convert in the same entry."""
+        entry = _entry(1)
+        entry.paper = entry.paper.model_copy(update={
+            "title": r"$\beta$-VAE for Music Generation",
+        })
+        entry.abstract_excerpt = r"Uses $\beta$-VAE with $\lambda$=0.1 for disentangled audio."
+        cfg = AppConfig()
+        html, text = render_email([entry], cfg)
+        # Title converted
+        assert "\u03b2-VAE" in html
+        assert r"$\beta$" not in html
+        # Excerpt converted
+        assert "\u03bb" in html  # lambda
+        assert r"$\lambda$" not in html
+
+    def test_percent_in_excerpt_with_latex_in_title(self) -> None:
+        """Mixed: LaTeX in title, percent in LLM summary."""
+        entry = _entry(1)
+        entry.paper = entry.paper.model_copy(update={
+            "title": r"$\alpha$-GAN for Audio Synthesis",
+        })
+        entry.abstract_excerpt = "Generates audio samples with 94.2% fidelity score."
+        cfg = AppConfig()
+        html, _ = render_email([entry], cfg)
+        assert "\u03b1-GAN" in html
+        assert "94.2%" in html
+        assert "fidelity" in html
