@@ -1,0 +1,92 @@
+version: 1
+
+# ============================================================================
+# GENERIC TEMPLATE — Customize this for your research interests
+# ============================================================================
+# This is a starting point. Edit the categories, keywords, and topic groups
+# below to match your field. The included example targets general ML/AI.
+#
+# To use: cp config/topics.generic.yaml config/topics.yaml
+#
+# Finding arXiv categories for your field:
+#   https://arxiv.org/category_taxonomy
+#
+# Tips:
+#   - categories: broad arXiv codes covering your field
+#   - keyword_queries: specific phrases you'd search for (AND-ed with categories)
+#   - keyword_groups: how papers are grouped in the email digest
+#   - Leave keyword_queries empty to get ALL papers in your categories
+# ============================================================================
+
+sources:
+  arxiv:
+    enabled: true
+    # arXiv category codes — find yours at https://arxiv.org/category_taxonomy
+    # Examples by field:
+    #   NLP/Computational Linguistics: cs.CL, cs.AI
+    #   Computer Vision: cs.CV, cs.AI, cs.LG
+    #   Robotics: cs.RO, cs.AI, cs.SY
+    #   Physics (condensed matter): cond-mat.str-el, cond-mat.mtrl-sci
+    #   Mathematics (algebra): math.AG, math.RA
+    #   Quantitative Biology: q-bio.GN, q-bio.BM
+    #   Economics: econ.GN, econ.TH
+    categories:
+      - cs.LG       # Machine Learning
+      - cs.AI       # Artificial Intelligence
+      - cs.CL       # Computation and Language
+      - stat.ML     # Machine Learning (Statistics)
+
+    # Keywords combined with categories via AND
+    # Only papers matching at least one keyword are returned
+    # Leave empty to fetch ALL papers in the categories above
+    keyword_queries:
+      - "large language model"
+      - "transformer"
+      - "reinforcement learning"
+      - "diffusion model"
+      - "representation learning"
+      - "fine-tuning"
+
+    lookback_days: 7
+    max_results_per_run: 200
+
+filters:
+  required_keywords: []
+  excluded_keywords:
+    - survey
+    - tutorial
+  max_authors: null
+
+ranking:
+  prioritize_recency: true
+  prioritize_keyword_matches: true
+  max_candidates_for_digest: 20
+
+digest:
+  title: Research Digest
+  formats:
+    - markdown
+  include_abstract_excerpt: true
+  include_reason_selected: true
+  include_links: true
+
+# Maps keywords to named topic sections in the email digest
+# Papers are assigned to the group whose keywords they match most strongly
+keyword_groups:
+  "Language Models":
+    - "large language model"
+    - "transformer"
+  "Reinforcement Learning":
+    - "reinforcement learning"
+  "Generative Models":
+    - "diffusion model"
+  "Representation Learning":
+    - "representation learning"
+    - "fine-tuning"
+
+summarization:
+  # "extractive" uses first 3 sentences of abstract (no API key needed)
+  # "llm" uses configured provider for concise newsletter-style summaries
+  mode: extractive
+  # "none" for no LLM, "gemini" for Google Gemini (free tier)
+  provider: none
