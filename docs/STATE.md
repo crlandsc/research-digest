@@ -15,10 +15,11 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M5: resource links (Code, Model, Demo, Dataset, Colab from arXiv comment/abstract)
 - M5: summary attribution (model name shown per entry in digest)
 - M5: thinking model support (filters thought parts from Gemini 3 / Gemma 4 responses)
-- M5: scheduling (GitHub Actions weekday cron at 6am ET, shifted for delay buffer)
+- M5: scheduling (GitHub Actions weekday cron at 7am ET)
 - M5: CI workflow (tests run on every push to main)
 - M5: LaTeX-to-Unicode conversion (pylatexenc converts math notation in email titles/summaries)
-- 179 tests all passing
+- M5: timeout fallback fix (timeouts continue chain instead of skipping to extractive)
+- 180 tests all passing
 
 ## Working commands
 - `research-digest run` — full pipeline (fetch + rank + build)

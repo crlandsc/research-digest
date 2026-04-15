@@ -6,6 +6,7 @@ build-backend = "hatchling.build"
 name = "research-digest"
 dynamic = ["version"]
 description = "Local-first research digest generator"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "typer>=0.12,<1",

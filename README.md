@@ -2,64 +2,72 @@
 
 A local-first tool that fetches recent arXiv papers, ranks them by relevance to your configured interests, and delivers a concise email digest with LLM-generated summaries. Papers are grouped by topic for easy scanning.
 
-Built for personal use but designed to be reusable. The default configuration targets music/audio AI/ML research, but it works for any arXiv domain by changing the config file.
+Built for personal use but designed to be forked. The default configuration targets music/audio AI/ML research, but it works for any arXiv domain — just edit the config file. A [generic template](#2-configure-your-interests) is included to get started quickly with any field.
 
-## Features
+## What you get
 
-- Fetches papers from arXiv based on categories and keyword queries
-- Scores and ranks papers using a deterministic point system
-- Generates concise newsletter-style summaries via Google Gemini (free tier)
-- Groups papers by topic in a clean HTML email
-- Extracts resource links — Code, Model, Demo, Dataset, Colab — from paper metadata
-- Delivers automatically on weekday mornings via GitHub Actions
-- CI runs 132 tests on every push
-- Works locally as a CLI with no required API keys (LLM and email are optional)
+- A weekday morning email digest with the most relevant papers in your field
+- Concise, newsletter-style summaries via Google Gemini (free tier, no billing required)
+- Papers grouped by topic and ranked by relevance
+- Resource links (Code, Model, Demo, Dataset, Colab) extracted automatically
+- LaTeX math notation rendered as clean Unicode in emails (e.g., `$\beta$` becomes `β`)
+- Works locally as a CLI with no API keys required (LLM and email are optional)
 
 ## Quickstart
 
-### Prerequisites
-
-- Python 3.12+
-- [pyenv](https://github.com/pyenv/pyenv) with pyenv-virtualenv (recommended) or standard `venv`
-
-### Install
+### 1. Install
 
 ```bash
 git clone https://github.com/crlandsc/research-digest.git
 cd research-digest
 
-# Option A: pyenv-virtualenv
-pyenv virtualenv 3.12.12 research-digest
-pyenv local research-digest
+# Create a virtual environment (pick one)
+python3 -m venv .venv && source .venv/bin/activate  # standard venv
+# OR: pyenv virtualenv 3.12 research-digest && pyenv local research-digest
 
-# Option B: standard venv
-python3 -m venv .venv && source .venv/bin/activate
-
-# Install
 pip install -e ".[dev]"
 ```
 
-### Configure
+Requires Python 3.12+.
+
+### 2. Configure your interests
 
 ```bash
+# Option A: Start from the generic ML/AI template
+cp config/topics.generic.yaml config/topics.yaml
+
+# Option B: Start from the music/audio ML example
 cp config/topics.example.yaml config/topics.yaml
 ```
 
-Edit `config/topics.yaml` to match your interests:
+Edit `config/topics.yaml` to match your field:
 
-- **categories** — arXiv category codes (e.g., `cs.SD`, `cs.LG`, `eess.AS`)
-- **keyword_queries** — search phrases (combined with categories via AND)
-- **keyword_groups** — maps keywords to named topic sections in the digest
-- **excluded_keywords** — papers matching these are filtered out (e.g., "survey")
-- **lookback_days** — how far back to fetch (default: 7)
-- **max_candidates_for_digest** — max papers per digest (default: 20)
+```yaml
+sources:
+  arxiv:
+    # arXiv categories — find yours at https://arxiv.org/category_taxonomy
+    categories:
+      - cs.CV       # Computer Vision
+      - cs.LG       # Machine Learning
 
-See `config/topics.example.yaml` for a full annotated example with comments.
+    # Search phrases (AND-ed with categories)
+    # Leave empty to get ALL papers in your categories
+    keyword_queries:
+      - "object detection"
+      - "image segmentation"
 
-### Run locally
+# How papers are grouped in the digest email
+keyword_groups:
+  "Detection":
+    - "object detection"
+  "Segmentation":
+    - "image segmentation"
+```
+
+### 3. Run locally
 
 ```bash
-# Full pipeline: fetch, rank, generate Markdown digest
+# Fetch, rank, and generate a Markdown digest
 research-digest run
 
 # Preview the arXiv query without fetching
@@ -68,90 +76,95 @@ research-digest fetch --dry-run
 # Override lookback window
 research-digest run --lookback-days 14
 
-# Check database status
+# Check database stats
 research-digest status
 ```
 
 Output is written to `output/<YYYY-MM-DD>/digest.md`.
 
-### Run tests
+### 4. Add LLM summaries (optional, free)
 
-```bash
-pytest          # 132 tests
-```
+By default, the digest uses the first few sentences of each abstract. For concise, newsletter-style summaries:
 
-Tests run automatically on every push to main via GitHub Actions CI. All tests are offline — no API keys or network access needed. Before pushing any changes, run `pytest` locally to verify nothing is broken.
+1. Get a free API key at [Google AI Studio](https://aistudio.google.com/apikey) (no billing required)
+2. Create `.env` from the template: `cp env.example .env`
+3. Add your key: `GEMINI_API_KEY=your_key_here`
+4. In `config/topics.yaml`, set:
+   ```yaml
+   summarization:
+     mode: llm
+     provider: gemini
+   ```
 
-## Optional: LLM summaries
+The summarizer uses a 5-model fallback chain (Gemini 3 Flash → Gemini 3.1 Flash Lite → Gemma 4 → Gemini 2.5 Flash → Gemini 2.5 Flash Lite) so it stays reliable even when individual models have outages.
 
-By default, the digest uses the first few sentences of each abstract. To get concise, newsletter-style summaries via Google Gemini (free):
+### 5. Add email delivery (optional)
 
-1. Get a free API key at [Google AI Studio](https://aistudio.google.com/apikey)
-2. Create a `.env` file from the template: `cp env.example .env`
-3. Add your key to `.env`: `GEMINI_API_KEY=your_key_here`
-4. Set `summarization.mode: llm` and `summarization.provider: gemini` in `config/topics.yaml`
-
-## Optional: Email delivery
-
-To receive the digest via email:
-
-1. Create a [Gmail App Password](https://myaccount.google.com/apppasswords) (requires 2FA)
+1. Create a [Gmail App Password](https://myaccount.google.com/apppasswords) (requires 2FA enabled on your Google account)
 2. Add to `.env`:
-  ```
+   ```
    EMAIL_FROM=you@gmail.com
    EMAIL_TO=you@gmail.com
    GMAIL_APP_PASSWORD=your_16_char_password
-  ```
+   ```
 3. Run with email: `research-digest run --send-email`
 
-## Optional: Automated daily delivery
+### 6. Automate with GitHub Actions (optional)
 
-The included GitHub Actions workflow delivers the digest every weekday morning:
+The included workflow delivers the digest every weekday morning automatically:
 
-1. Push this repo to GitHub
-2. Add repository secrets (Settings > Secrets > Actions):
-  - `GEMINI_API_KEY`
-  - `GMAIL_APP_PASSWORD`
-  - `EMAIL_FROM`
-  - `EMAIL_TO`
-3. The workflow runs at ~8:05am ET Mon-Fri automatically
-   - Monday covers Saturday + Sunday (3-day lookback)
-   - Tuesday-Friday covers the previous day (1-day lookback)
-4. You can also trigger manually from the Actions tab
+1. Fork or push this repo to GitHub
+2. Go to Settings > Secrets and variables > Actions
+3. Add these repository secrets:
+   - `GEMINI_API_KEY` — your Google AI Studio key
+   - `GMAIL_APP_PASSWORD` — your Gmail app password
+   - `EMAIL_FROM` — sender email address
+   - `EMAIL_TO` — recipient email address
+4. That's it. The workflow runs at ~7 AM ET on weekdays.
+   - Monday covers the weekend (3-day lookback)
+   - Tuesday-Friday covers the previous day
 
-**Note:** GitHub Actions cron can be delayed 10-60+ minutes during high load, and scheduled at :05 to avoid top-of-hour congestion ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)). If a digest doesn't arrive, check the Actions tab and trigger manually.
+You can also trigger manually from the Actions tab at any time.
+
+**Note:** GitHub Actions scheduled runs can be delayed 10-60+ minutes during high load ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)). If a digest doesn't arrive, trigger it manually.
 
 ## How it works
 
-1. **Fetch** — queries the arXiv Atom/XML API with configured categories + keywords
+1. **Fetch** — queries the arXiv API with your configured categories + keywords
 2. **Store** — persists paper metadata in local SQLite for deduplication
 3. **Rank** — scores each paper: +10 per category match, +15 per keyword in title, +5 in abstract, +10 for recency
-4. **Summarize** — extractive (first 3 sentences) or LLM-generated (Gemini)
-5. **Extract links** — finds Code, Model, Demo, Dataset, Colab URLs in paper metadata
-6. **Build** — generates Markdown digest, groups papers by topic
-7. **Deliver** — optional HTML email via Gmail SMTP
+4. **Summarize** — extractive (first 3 sentences) or LLM-generated via Gemini (free tier)
+5. **Render** — generates Markdown digest with topic grouping; LaTeX math converted to Unicode for email
+6. **Deliver** — optional HTML email via Gmail SMTP
+
+## Tests
+
+```bash
+pytest    # 180 tests, all offline (no API keys or network needed)
+```
+
+CI runs on every push to main.
 
 ## Repository layout
 
 ```
 src/research_digest/
-  cli.py                — Typer CLI (fetch, rank, build, run, send, status)
+  cli.py                — Typer CLI (run, fetch, send, status)
   config.py             — YAML + env var config loading
   models.py             — Pydantic data models
-  categories.py         — arXiv category code to name mapping
-  logging_config.py     — logging setup
-  fetchers/arxiv.py     — arXiv API client and XML parser
-  storage/db.py         — SQLite schema and connection
-  storage/repository.py — data access layer
+  fetchers/arxiv.py     — arXiv API client
+  storage/              — SQLite persistence and deduplication
   pipeline/             — fetch, rank, summarize, build orchestration
-  summarization/        — LLM provider abstraction (Gemini, extractive)
-  delivery/             — email provider abstraction (Gmail SMTP)
-  rendering/            — Markdown and HTML email renderers
-tests/                  — 132 pytest tests
-config/                 — topic configuration (YAML)
-.github/workflows/      — GitHub Actions cron workflow
+  summarization/        — LLM provider abstraction (Gemini fallback chain)
+  rendering/            — Markdown, HTML email, LaTeX-to-Unicode conversion
+  delivery/             — email delivery (Gmail SMTP)
+config/
+  topics.example.yaml   — music/audio ML configuration (annotated)
+  topics.generic.yaml   — generic ML/AI template (starting point for any field)
+tests/                  — 180 pytest tests
+.github/workflows/      — GitHub Actions: daily digest + CI
 ```
 
 ## License
 
-Personal project. Use freely.
+MIT License. See [LICENSE](LICENSE).
