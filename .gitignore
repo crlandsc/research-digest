@@ -21,9 +21,6 @@ build/
 data/
 output/
 
-# Personal config (copy topics.example.yaml to topics.yaml and customize)
-config/topics.yaml
-
 # Logs
 *.log
 
