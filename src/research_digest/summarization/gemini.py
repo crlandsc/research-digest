@@ -101,12 +101,19 @@ class GeminiProvider(SummarizationProvider):
             },
         }
 
-        last_response = None
+        last_error = None
         for model in MODEL_CHAIN:
             url = f"{API_BASE}/{model}:generateContent?key={self.api_key}"
             for attempt in range(RETRIES_PER_MODEL):
                 logger.debug("Requesting %s (attempt %d/%d)", model, attempt + 1, RETRIES_PER_MODEL)
-                response = self._client.post(url, json=payload)
+                try:
+                    response = self._client.post(url, json=payload)
+                except httpx.TimeoutException as e:
+                    logger.warning("%s timed out (attempt %d/%d), trying next model",
+                                   model, attempt + 1, RETRIES_PER_MODEL)
+                    last_error = e
+                    break  # don't retry timeouts on same model, move to next
+
                 logger.debug("Response from %s: HTTP %d", model, response.status_code)
 
                 if response.status_code == 200:
@@ -117,7 +124,7 @@ class GeminiProvider(SummarizationProvider):
                         raise ValueError(f"No answer text in response from {model}")
                     return SummaryResult(text=text, source=model)
 
-                last_response = response
+                last_error = None
                 if response.status_code in (429, 503) and attempt < RETRIES_PER_MODEL - 1:
                     logger.warning("%s returned %d, retry %d/%d in %ds",
                                    model, response.status_code,
@@ -127,11 +134,16 @@ class GeminiProvider(SummarizationProvider):
 
                 logger.warning("%s failed with %d, trying next model", model, response.status_code)
                 break
+            else:
+                # retry loop exhausted without break — last response was an HTTP error
+                continue
+            # break from retry loop hit — timeout or non-retryable error, try next model
+            continue
 
         # all models exhausted
-        logger.error("All %d models failed. Last: %d %s",
-                     len(MODEL_CHAIN), last_response.status_code, last_response.text[:300])
-        last_response.raise_for_status()
+        if last_error:
+            raise last_error
+        raise RuntimeError("All models in fallback chain failed")
 
     @staticmethod
     def _extract_answer(data: dict) -> str | None:
