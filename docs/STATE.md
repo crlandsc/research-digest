@@ -30,7 +30,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
-- Schedule: weekdays 10:05 UTC (~6:05am EDT / ~5:05am EST)
+- Schedule: weekdays 11:05 UTC (~7:05am EDT / ~6:05am EST)
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO

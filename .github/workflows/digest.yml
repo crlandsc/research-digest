@@ -2,11 +2,10 @@ name: Daily Research Digest
 
 on:
   schedule:
-    # ~6:05 AM ET weekdays (10:05 UTC during EDT, 11:05 UTC during EST)
-    # Early enough to absorb GitHub's typical 1-2 hour scheduling delays.
+    # ~7:05 AM ET weekdays (11:05 UTC during EDT, 12:05 UTC during EST)
     # Offset from :00 to avoid GitHub Actions high-load delays at the top of the hour.
     # See: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
-    - cron: '5 10 * * 1-5'
+    - cron: '5 11 * * 1-5'
   workflow_dispatch:
     inputs:
       lookback_days:
