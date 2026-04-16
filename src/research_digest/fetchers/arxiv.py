@@ -102,7 +102,10 @@ def fetch_papers(
     logger.info("Max results: %d, page size: %d", max_to_fetch, page_size)
 
     with httpx.Client(
-        headers={"User-Agent": USER_AGENT},
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "application/atom+xml, application/xml;q=0.9, */*;q=0.8",
+        },
         timeout=90.0,
         follow_redirects=True,
     ) as client:
@@ -142,10 +145,12 @@ def _request_with_retry(
     params: dict[str, str],
     max_retries: int = 4,
 ) -> httpx.Response:
-    """Make request with exponential backoff on 429/503/timeout.
+    """Make request with exponential backoff on transient errors.
 
-    GH Actions shared IPs are commonly rate limited by arXiv,
-    so we use aggressive waits: 30s, 60s, 90s, 120s.
+    Retries on: any 5xx, 406 (CDN block), 408 (timeout), 429 (rate limit),
+    plus ReadTimeout and ConnectError exceptions.
+    GH Actions shared IPs are commonly rate limited or transiently blocked
+    by arXiv's Fastly CDN, so we use aggressive waits: 30s, 60s, 90s, 120s.
     """
     backoff_base = 30
     url = httpx.URL(ARXIV_API_URL).copy_merge_params(params)
@@ -183,7 +188,8 @@ def _request_with_retry(
                      {k: v for k, v in response.headers.items()
                       if k.lower() in ("retry-after", "x-ratelimit-remaining", "x-cache", "server", "content-type")})
 
-        if response.status_code in (429, 503) and attempt < max_retries:
+        retryable = response.status_code >= 500 or response.status_code in (406, 408, 429)
+        if retryable and attempt < max_retries:
             retry_after = response.headers.get("Retry-After")
             wait = int(retry_after) if retry_after else backoff_base * (attempt + 1)
             body_preview = response.text[:200] if response.text else "(empty)"
