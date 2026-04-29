@@ -161,6 +161,12 @@ This file records decisions that should survive across sessions.
 - Decision: Convert LaTeX notation to Unicode in email rendering using pylatexenc 2.x. Markdown output retains raw LaTeX (renders natively in GitHub/VS Code). Bare `%` is pre-escaped to prevent pylatexenc from treating it as a LaTeX comment.
 - Rationale: arXiv titles and abstracts contain LaTeX math ($\beta$, $\frac{1}{2}$, etc.) that email clients cannot render. pylatexenc is pure Python, zero runtime deps, ~137 KB, and handles the 90%+ case for arXiv metadata. Conversion applied at render time via _EntryProxy so raw data is preserved in the database.
 
+## D-026
+- Date: 2026-04-29
+- Status: Accepted
+- Decision: Two-layer arXiv 429 handling: (a) in-process exponential backoff with jitter (30s→480s cap, 7 attempts, honors Retry-After) plus 0–10s startup jitter; (b) workflow-level retry — a persistent 429 makes the CLI exit 75 (EX_TEMPFAIL), the workflow sleeps 30 min and re-runs once. Workflow `timeout-minutes` bumped to 75.
+- Rationale: arXiv is fronted by Fastly, which throttles shared GH Actions egress IPs and the rate-limit decision can persist longer than any in-process backoff can practically absorb (observed 5+ min sticky throttle). A second attempt 30 min later usually lands on a different runner or after the throttle clears; the typed exit code keeps non-rate-limit failures from triggering long sleeps.
+
 ---
 
 ## Instructions for future updates

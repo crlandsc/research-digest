@@ -31,7 +31,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
-- Schedule: weekdays 11:05 UTC (~7:05am EDT / ~6:05am EST)
+- Schedule: weekdays 11:07 UTC (~7:07am EDT / ~6:07am EST)
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
@@ -43,8 +43,15 @@ Milestone 5 — complete. All core features implemented and deployed.
 - Scheduled workflows are auto-disabled after 60 days of no repo activity on public repos
 - If a digest doesn't arrive, trigger manually from the Actions tab
 
+### arXiv rate-limit (HTTP 429) handling
+- arXiv's Fastly CDN throttles shared CI egress IPs; the rate-limit window can persist many minutes
+- In-process: exponential backoff with jitter (~30s, 60s, 120s, 240s, 480s cap), 7 attempts; honors Retry-After
+- Initial 0-10s startup jitter to desync from other Actions cron jobs at :05
+- Persistent 429 → CLI exits 75 (EX_TEMPFAIL) → workflow retries up to 2 more times with 30 min then 60 min sleeps (fresh runner / cleared throttle)
+- Workflow timeout 150 min to accommodate three attempts
+
 ## Remaining
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
-2026-04-15
+2026-04-29
