@@ -2,10 +2,10 @@ name: Daily Research Digest
 
 on:
   schedule:
-    # ~7:05 AM ET weekdays (11:05 UTC during EDT, 12:05 UTC during EST)
-    # Offset from :00 to avoid GitHub Actions high-load delays at the top of the hour.
-    # See: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
-    - cron: '5 11 * * 1-5'
+    # ~7:07 AM ET weekdays (11:07 UTC during EDT, 12:07 UTC during EST)
+    # :07 (prime, not :00 or :05) avoids the heaviest GH Actions cron spikes;
+    # see https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
+    - cron: '7 11 * * 1-5'
   workflow_dispatch:
     inputs:
       lookback_days:
@@ -16,7 +16,9 @@ on:
 jobs:
   digest:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 150 min covers three run attempts (~15 min each) with 30 + 60 min sleeps
+    # between them when arXiv rate-limits the runner's egress IP.
+    timeout-minutes: 150
 
     steps:
       - uses: actions/checkout@v5
@@ -72,11 +74,39 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          LOOKBACK_DAYS: ${{ steps.lookback.outputs.days }}
         run: |
-          research-digest run \
-            --lookback-days ${{ steps.lookback.outputs.days }} \
-            --send-email \
-            --verbose
+          # Workflow-level retry on arXiv rate-limit (CLI exit code 75).
+          # arXiv's Fastly CDN throttles shared CI egress IPs and the rate-limit
+          # window can persist many minutes — longer than in-process backoff can
+          # safely cover. On a 429-retry exit, sleep and re-run; later attempts
+          # may land on a different runner or after the throttle clears.
+          # Sleep schedule between attempts: 30 min, then 60 min.
+          set +e
+          sleeps=(0 1800 3600)  # seconds before attempts 1, 2, 3
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            wait=${sleeps[$((attempt - 1))]}
+            if [ "$wait" -gt 0 ]; then
+              echo "arXiv rate-limited (exit 75). Sleeping $((wait / 60)) min before attempt $attempt..."
+              sleep "$wait"
+            fi
+            echo "::group::digest run attempt $attempt/$max_attempts"
+            research-digest run \
+              --lookback-days "$LOOKBACK_DAYS" \
+              --send-email \
+              --verbose
+            rc=$?
+            echo "::endgroup::"
+            if [ "$rc" -eq 0 ]; then
+              echo "Digest run succeeded on attempt $attempt."
+              exit 0
+            fi
+            if [ "$rc" -ne 75 ] || [ "$attempt" -ge "$max_attempts" ]; then
+              echo "Digest run failed (exit $rc, attempt $attempt). Giving up."
+              exit "$rc"
+            fi
+          done
 
       - name: Upload digest artifact
         uses: actions/upload-artifact@v5
