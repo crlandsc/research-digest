@@ -154,6 +154,8 @@ def run(
     setup_logging("DEBUG" if verbose else "WARNING")
     cfg = load_config(config)
 
+    from research_digest.fetchers.arxiv import ArxivRateLimitError
+
     try:
         path, entries = run_pipeline(cfg, since_last_run, lookback_days, dry_run)
         if path:
@@ -162,6 +164,10 @@ def run(
                 _send_digest_from_entries(cfg, path, entries)
         elif dry_run:
             typer.echo("Dry run complete.")
+    except ArxivRateLimitError as e:
+        # EX_TEMPFAIL (75): retry-worthy. Workflow uses this to trigger a delayed re-run.
+        typer.echo(f"Rate limited by arXiv: {e}", err=True)
+        raise typer.Exit(75)
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)

@@ -1,13 +1,20 @@
 """Tests for arXiv fetcher and XML parsing."""
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock
 
+import httpx
 import pytest
 
 from research_digest.config import ArxivSourceConfig
 from research_digest.fetchers.arxiv import (
+    RETRY_BACKOFF_BASE,
+    RETRY_BACKOFF_CAP,
+    ArxivRateLimitError,
+    _compute_backoff,
     _extract_code_url,
     _extract_resource_links,
+    _request_with_retry,
     build_query,
     compute_date_range,
     parse_arxiv_response,
@@ -272,6 +279,114 @@ class TestBuildQuery:
             datetime(2024, 1, 8, 18, 30, tzinfo=timezone.utc),
         )
         assert "submittedDate:[202401010600 TO 202401081830]" in q
+
+
+def _mock_response(status: int, text: str = "", headers: dict | None = None) -> MagicMock:
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = status
+    resp.text = text
+    resp.headers = headers or {}
+    if status >= 400:
+        resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+            f"{status}", request=MagicMock(), response=resp
+        )
+    else:
+        resp.raise_for_status.return_value = None
+    return resp
+
+
+class TestRequestWithRetry:
+    @pytest.fixture(autouse=True)
+    def _no_sleep(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("research_digest.fetchers.arxiv.time.sleep", lambda _s: None)
+
+    def test_succeeds_first_try(self) -> None:
+        client = MagicMock()
+        client.get.return_value = _mock_response(200, "<feed/>")
+        resp = _request_with_retry(client, {"q": "x"}, max_retries=3)
+        assert resp.status_code == 200
+        assert client.get.call_count == 1
+
+    def test_retries_on_429_then_succeeds(self) -> None:
+        client = MagicMock()
+        client.get.side_effect = [
+            _mock_response(429, "Rate exceeded."),
+            _mock_response(429, "Rate exceeded."),
+            _mock_response(200, "<feed/>"),
+        ]
+        resp = _request_with_retry(client, {"q": "x"}, max_retries=3)
+        assert resp.status_code == 200
+        assert client.get.call_count == 3
+
+    def test_persistent_429_raises_rate_limit_error(self) -> None:
+        client = MagicMock()
+        client.get.return_value = _mock_response(429, "Rate exceeded.")
+        with pytest.raises(ArxivRateLimitError):
+            _request_with_retry(client, {"q": "x"}, max_retries=2)
+        assert client.get.call_count == 3  # max_retries + 1
+
+    def test_retries_on_5xx(self) -> None:
+        client = MagicMock()
+        client.get.side_effect = [
+            _mock_response(503, "down"),
+            _mock_response(200, "<feed/>"),
+        ]
+        resp = _request_with_retry(client, {"q": "x"}, max_retries=3)
+        assert resp.status_code == 200
+        assert client.get.call_count == 2
+
+    def test_retries_on_connect_error(self) -> None:
+        client = MagicMock()
+        client.get.side_effect = [
+            httpx.ConnectError("boom"),
+            _mock_response(200, "<feed/>"),
+        ]
+        resp = _request_with_retry(client, {"q": "x"}, max_retries=3)
+        assert resp.status_code == 200
+        assert client.get.call_count == 2
+
+    def test_4xx_other_than_retryable_raises_immediately(self) -> None:
+        client = MagicMock()
+        client.get.return_value = _mock_response(404, "not found")
+        with pytest.raises(httpx.HTTPStatusError):
+            _request_with_retry(client, {"q": "x"}, max_retries=3)
+        assert client.get.call_count == 1
+
+    def test_honors_retry_after_when_longer_than_backoff(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        sleeps: list[float] = []
+        monkeypatch.setattr(
+            "research_digest.fetchers.arxiv.time.sleep", lambda s: sleeps.append(s)
+        )
+        # Force backoff jitter to 0 so we can compare cleanly.
+        monkeypatch.setattr(
+            "research_digest.fetchers.arxiv.random.uniform", lambda a, b: 0
+        )
+        client = MagicMock()
+        client.get.side_effect = [
+            _mock_response(429, "rate", headers={"Retry-After": "120"}),
+            _mock_response(200, "<feed/>"),
+        ]
+        _request_with_retry(client, {"q": "x"}, max_retries=3)
+        # First attempt's backoff (no jitter) = 30s; Retry-After of 120s should win.
+        assert sleeps and sleeps[0] == 120
+
+
+class TestComputeBackoff:
+    def test_grows_exponentially(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "research_digest.fetchers.arxiv.random.uniform", lambda a, b: 0
+        )
+        assert _compute_backoff(0) == RETRY_BACKOFF_BASE
+        assert _compute_backoff(1) == RETRY_BACKOFF_BASE * 2
+        assert _compute_backoff(2) == RETRY_BACKOFF_BASE * 4
+
+    def test_caps_at_max(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            "research_digest.fetchers.arxiv.random.uniform", lambda a, b: 0
+        )
+        assert _compute_backoff(20) == RETRY_BACKOFF_CAP
 
 
 class TestComputeDateRange:
