@@ -54,4 +54,4 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
-2026-04-29
+2026-05-11 — migrated `gemini-3.1-flash-lite-preview` → GA `gemini-3.1-flash-lite` (preview deprecated 2026-05-11, shutdown 2026-05-25; see D-027)

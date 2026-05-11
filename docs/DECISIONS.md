@@ -167,6 +167,18 @@ This file records decisions that should survive across sessions.
 - Decision: Two-layer arXiv 429 handling: (a) in-process exponential backoff with jitter (30s→480s cap, 7 attempts, honors Retry-After) plus 0–10s startup jitter; (b) workflow-level retry — a persistent 429 makes the CLI exit 75 (EX_TEMPFAIL), the workflow sleeps 30 min and re-runs once. Workflow `timeout-minutes` bumped to 75.
 - Rationale: arXiv is fronted by Fastly, which throttles shared GH Actions egress IPs and the rate-limit decision can persist longer than any in-process backoff can practically absorb (observed 5+ min sticky throttle). A second attempt 30 min later usually lands on a different runner or after the throttle clears; the typed exit code keeps non-rate-limit failures from triggering long sleeps.
 
+## D-027
+- Date: 2026-05-11
+- Status: Accepted
+- Decision: Migrated position 2 of the fallback chain from `gemini-3.1-flash-lite-preview` to GA `gemini-3.1-flash-lite`.
+- Rationale: Per the Gemini API changelog, `gemini-3.1-flash-lite-preview` is deprecating on 2026-05-11 and shutting down on 2026-05-25. The GA `gemini-3.1-flash-lite` (released 2026-05-07) is the drop-in successor — same `generateContent` API, same family, expected to be more reliable than the preview (D-023 noted frequent 503s on the preview). Supersedes the preview reference in D-023.
+
+## D-028
+- Date: 2026-05-11
+- Status: Accepted
+- Decision: Maintain both `CHANGELOG.md` (what changed, per-version, user-facing) and `docs/DECISIONS.md` (why, by topic, contributor-facing). Each new version bump adds a terse `CHANGELOG.md` entry cross-referencing the relevant D-NNN where applicable.
+- Rationale: They answer different questions and serve different audiences. Forkers want a quick "what's new in 0.1.7"; contributors want the rationale and trade-offs. Conflating them either bloats the changelog or hides version history inside ADRs.
+
 ---
 
 ## Instructions for future updates
