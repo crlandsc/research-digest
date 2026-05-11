@@ -19,13 +19,13 @@ API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 # Model                            GPQA   MMLU   RPM   RPD
 # -------------------------------- ------ ------ ----- -----
 # gemini-3-flash-preview           90.4   91.8     5    20
-# gemini-3.1-flash-lite-preview    86.9   88.9    15   500
+# gemini-3.1-flash-lite            86.9   88.9    15   500
 # gemma-4-31b-it                   84.3   85.2    15  1500
 # gemini-2.5-flash                 82.8   88.4     5    20
 # gemini-2.5-flash-lite            64.6   81.1    10    20
 MODEL_CHAIN = [
     "gemini-3-flash-preview",
-    "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-lite",
     "gemma-4-31b-it",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
