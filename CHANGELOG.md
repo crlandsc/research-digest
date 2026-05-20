@@ -2,6 +2,10 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.8 — 2026-05-20
+- Added `gemini-3.5-flash` (GA 2026-05-19) at position 1 of the fallback chain; chain length 5 → 6 (D-029)
+- New `research-digest check-models` CLI command + weekly cron that diffs `MODEL_CHAIN` against the live ListModels API and surfaces drift (D-030)
+
 ## 0.1.7 — 2026-05-11
 - Migrated fallback chain from `gemini-3.1-flash-lite-preview` to GA `gemini-3.1-flash-lite` (D-027)
 
