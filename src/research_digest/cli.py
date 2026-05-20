@@ -228,6 +228,20 @@ def _send_digest_standalone(cfg: AppConfig) -> None:
     typer.echo(f"Email sent to {provider.to_addr}")
 
 
+@app.command(name="check-models")
+def check_models(
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
+) -> None:
+    """Diff MODEL_CHAIN against Google's live ListModels API; exit 1 on drift."""
+    from research_digest.summarization.model_check import format_report, run_check
+
+    setup_logging("DEBUG" if verbose else "WARNING")
+    report = run_check()
+    typer.echo(format_report(report))
+    if report.has_drift:
+        raise typer.Exit(1)
+
+
 @app.command()
 def status(
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,

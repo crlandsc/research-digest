@@ -1,0 +1,33 @@
+name: Check Gemini Model Drift
+
+# Weekly diff of MODEL_CHAIN against Google's ListModels API.
+# Job failure auto-emails the repo owner via GitHub's default notification
+# settings, so any drift surfaces without extra plumbing.
+
+on:
+  schedule:
+    # Monday 14:17 UTC (~10:17 AM ET) — well after the daily digest finishes.
+    # :17 is off the cron-job rush hour to reduce GH Actions queue delay.
+    - cron: '17 14 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Run drift check
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: research-digest check-models --verbose
