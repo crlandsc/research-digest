@@ -87,7 +87,7 @@ class TestGeminiProvider:
             result = provider.summarize_paper(_paper())
 
         assert result.text == "A concise summary of the paper."
-        assert result.source == "gemini-3-flash-preview"
+        assert result.source == "gemini-3.5-flash"
 
     def test_fallback_on_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
@@ -120,8 +120,8 @@ class TestGeminiProvider:
         def mock_post(url, **kwargs):
             nonlocal call_count
             call_count += 1
-            # First 3 models timeout, 4th succeeds (gemini-2.5-flash)
-            if call_count <= 3:
+            # First 4 models timeout, 5th succeeds (gemini-2.5-flash)
+            if call_count <= 4:
                 raise _httpx.ReadTimeout("timed out")
             return ok_response
 
@@ -130,4 +130,4 @@ class TestGeminiProvider:
 
         assert result.text == "Summary from later model."
         assert result.source == "gemini-2.5-flash"
-        assert call_count == 4  # 3 timeouts + 1 success
+        assert call_count == 5  # 4 timeouts + 1 success

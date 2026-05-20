@@ -13,17 +13,20 @@ logger = logging.getLogger(__name__)
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-# Fallback chain ordered by quality (benchmarks: GPQA Diamond / MMLU).
-# Each model uses the same generateContent REST API.
+# Fallback chain ordered by quality. Each model uses the same generateContent
+# REST API and is free-tier eligible. Verified against ai.google.dev on
+# 2026-05-20.
 #
-# Model                            GPQA   MMLU   RPM   RPD
-# -------------------------------- ------ ------ ----- -----
-# gemini-3-flash-preview           90.4   91.8     5    20
-# gemini-3.1-flash-lite            86.9   88.9    15   500
-# gemma-4-31b-it                   84.3   85.2    15  1500
-# gemini-2.5-flash                 82.8   88.4     5    20
-# gemini-2.5-flash-lite            64.6   81.1    10    20
+# Model                    Status                   Notes
+# ------------------------ ------------------------ ------------------------------
+# gemini-3.5-flash         GA (2026-05-19)          Best Flash; outperforms 3.1 Pro
+# gemini-3-flash-preview   Preview                  No shutdown announced
+# gemini-3.1-flash-lite    GA (2026-05-07)          Earliest shutdown 2027-05-07
+# gemma-4-31b-it           GA (2026-04-02)          —
+# gemini-2.5-flash         GA, deprecating          Shutdown 2026-10-16
+# gemini-2.5-flash-lite    GA, deprecating          Shutdown 2026-10-16
 MODEL_CHAIN = [
+    "gemini-3.5-flash",
     "gemini-3-flash-preview",
     "gemini-3.1-flash-lite",
     "gemma-4-31b-it",
