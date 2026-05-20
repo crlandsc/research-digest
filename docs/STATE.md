@@ -9,7 +9,8 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
 - M3: ranking and digest generation (scoring, filters, Markdown renderer)
 - M4: usability hardening (CLI ergonomics, status command, edge case tests)
-- M5: LLM summarization (5-model fallback chain: Gemini 3 Flash → 3.1 Flash Lite → Gemma 4 31B → 2.5 Flash → 2.5 Flash Lite)
+- M5: LLM summarization (6-model fallback chain: Gemini 3.5 Flash → 3 Flash → 3.1 Flash Lite → Gemma 4 31B → 2.5 Flash → 2.5 Flash Lite)
+- M5: model-drift checker (weekly cron diffs MODEL_CHAIN against live ListModels API)
 - M5: email delivery (Gmail SMTP with newsletter-style HTML)
 - M5: topic grouping (papers grouped by keyword category in email)
 - M5: resource links (Code, Model, Demo, Dataset, Colab from arXiv comment/abstract)
@@ -54,4 +55,4 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
-2026-05-11 — migrated `gemini-3.1-flash-lite-preview` → GA `gemini-3.1-flash-lite` (preview deprecated 2026-05-11, shutdown 2026-05-25; see D-027)
+2026-05-20 — added GA `gemini-3.5-flash` (released 2026-05-19) at position 1 of chain; added drift-checker CLI + weekly cron (see D-029, D-030)

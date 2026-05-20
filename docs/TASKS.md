@@ -49,6 +49,8 @@ This file is the prioritized build backlog.
 - [x] Add optional scheduling (GitHub Actions, weekdays 8am ET)
 - [x] Add optional deployment path (GitHub Actions workflow)
 - [x] Add LaTeX-to-Unicode conversion for email digest rendering
+- [x] Add `gemini-3.5-flash` to fallback chain (D-029)
+- [x] Add model-drift checker CLI + weekly cron (D-030)
 - [ ] Design source adapters for future music/audio venues (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP)
 
 ## Prioritization rule

@@ -109,7 +109,17 @@ To get concise, newsletter-style summaries instead of abstract excerpts:
      provider: gemini
    ```
 
-The summarizer uses a 5-model fallback chain (Gemini 3 Flash → Gemini 3.1 Flash Lite → Gemma 4 → Gemini 2.5 Flash → Gemini 2.5 Flash Lite), ordered by benchmark quality. All models are within Google's free tier, and the chain automatically falls back to the next model if one has an outage or hits rate limits.
+The summarizer uses a 6-model fallback chain (Gemini 3.5 Flash → Gemini 3 Flash → Gemini 3.1 Flash Lite → Gemma 4 → Gemini 2.5 Flash → Gemini 2.5 Flash Lite), ordered by benchmark quality. All models are within Google's free tier, and the chain automatically falls back to the next model if one has an outage or hits rate limits.
+
+#### Keeping the model chain current
+
+Google ships new Gemini models often and retires old ones on rolling dates. To detect drift between the configured chain and the live API:
+
+```bash
+research-digest check-models     # diffs MODEL_CHAIN against ListModels; exit 1 on drift
+```
+
+A weekly GitHub Actions cron ([`.github/workflows/check-models.yml`](.github/workflows/check-models.yml)) runs the same check every Monday and fails the job (which auto-emails the repo owner) when any chain model goes missing from the API or a newer family member appears. The chain is never auto-updated — promotion stays a human decision.
 
 ### 5. Add email delivery (optional)
 

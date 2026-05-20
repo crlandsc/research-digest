@@ -179,6 +179,18 @@ This file records decisions that should survive across sessions.
 - Decision: Maintain both `CHANGELOG.md` (what changed, per-version, user-facing) and `docs/DECISIONS.md` (why, by topic, contributor-facing). Each new version bump adds a terse `CHANGELOG.md` entry cross-referencing the relevant D-NNN where applicable.
 - Rationale: They answer different questions and serve different audiences. Forkers want a quick "what's new in 0.1.7"; contributors want the rationale and trade-offs. Conflating them either bloats the changelog or hides version history inside ADRs.
 
+## D-029
+- Date: 2026-05-20
+- Status: Accepted
+- Decision: Add GA `gemini-3.5-flash` (released 2026-05-19) at position 1 of the fallback chain. Keep `gemini-2.5-flash` and `gemini-2.5-flash-lite` in the chain even though both have a 2026-10-16 shutdown date; the drift checker (D-030) will surface the cutover. Final order: `gemini-3.5-flash → gemini-3-flash-preview → gemini-3.1-flash-lite → gemma-4-31b-it → gemini-2.5-flash → gemini-2.5-flash-lite`. Supersedes the chain documented in D-023 and D-027.
+- Rationale: Per Google's I/O 2026 announcement, 3.5-flash outperforms Gemini 3.1 Pro on coding/agentic benchmarks at 4× the speed and is free-tier eligible. Putting it first maximizes summary quality without affecting the existing fallback behavior. The deprecating 2.5 models still work today; removing them now would shorten the chain unnecessarily.
+
+## D-030
+- Date: 2026-05-20
+- Status: Accepted
+- Decision: Add `research-digest check-models` CLI command and a weekly GitHub Actions cron (`.github/workflows/check-models.yml`) that calls Google's ListModels endpoint and diffs the response against `MODEL_CHAIN`. The check reports (a) chain models missing from the live API (retired), (b) newer family-mates not yet in the chain (e.g., `gemini-3.6-flash` or `gemini-3.5-flash-002`), and (c) the full remote inventory. Drift causes the workflow to exit non-zero so GitHub auto-emails the repo owner.
+- Rationale: The Gemini API ships new models at high cadence (3 new GA models in the last 6 weeks alone) and deprecates older ones on rolling dates. Manual monitoring is unreliable. A weekly automated diff catches both arrivals and departures with zero ongoing cost — the ListModels endpoint is free and unauthenticated beyond the existing `GEMINI_API_KEY`. We do not auto-update the chain because model promotion is a quality-sensitive decision that should stay human-in-the-loop.
+
 ---
 
 ## Instructions for future updates
