@@ -1,11 +1,11 @@
 name: Daily Research Digest
 
 on:
-  schedule:
-    # ~5:37 AM ET weekdays (9:37 UTC during EDT, 10:37 UTC during EST)
-    # :37 (prime-ish, not :00 or :05) avoids the heaviest GH Actions cron spikes;
-    # see https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
-    - cron: '37 9 * * 1-5'
+  # No `schedule:` trigger — GitHub's cron batches/delays scheduled events (often many
+  # minutes to hours under load). Instead, a launchd timer on the self-hosted Mac mini
+  # (~/Library/LaunchAgents/com.crlandsc.research-digest-trigger.plist) fires
+  # `gh workflow run` at 08:00 ET on weekdays; workflow_dispatch dispatches promptly and
+  # the run executes on the self-hosted runner. See docs/RUNNER.md.
   workflow_dispatch:
     inputs:
       lookback_days:
