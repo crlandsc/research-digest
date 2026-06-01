@@ -28,3 +28,6 @@ output/
 .DS_Store
 .vscode/
 .idea/
+
+# Transient agent worktrees (created by background tasks)
+.claude/worktrees/

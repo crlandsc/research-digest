@@ -13,7 +13,9 @@ on:
 
 jobs:
   check-models:
-    runs-on: ubuntu-latest
+    # Shares the AUTOMATION_RUNNER switch with the daily digest so all scheduled
+    # automation runs in one place (GitHub-hosted by default). See docs/RUNNER.md.
+    runs-on: ${{ vars.AUTOMATION_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
 
     steps:

@@ -153,6 +153,18 @@ You can also trigger manually from the Actions tab at any time.
 
 **Note:** GitHub Actions scheduled runs can be delayed 10-60+ minutes during high load ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)). I had a little trouble with this initially (GitHub can take a day or two before scheduled workflows start running reliably on a new fork), so give it at least a couple days.
 
+### 7. Run on your own machine instead (optional)
+
+GitHub-hosted runners share their outbound IPs with countless other CI jobs that also scrape arXiv, so over time the daily fetch increasingly gets rate-limited (HTTP 429/503) through no fault of your config. If you have an always-on machine, you can run your **scheduled automation** (the daily digest *and* the weekly model-check) on a **self-hosted runner** instead — same workflows, secrets, and email, but from your own un-throttled IP. It's a one-command toggle, defaults to GitHub-hosted (so forks are unaffected), and CI tests always stay on GitHub:
+
+```bash
+scripts/runner.sh local    # run scheduled automation on your self-hosted runner
+scripts/runner.sh github   # switch back to GitHub-hosted (the default)
+scripts/runner.sh status   # show the current selection
+```
+
+See **[docs/RUNNER.md](docs/RUNNER.md)** for the rationale, the one-time runner setup, and the security/fork-safety notes.
+
 ## How it works
 
 Here's what happens under the hood when the digest runs:
@@ -188,6 +200,8 @@ src/research_digest/
 config/
   topics.example.yaml   — annotated template (generic ML/AI, easy to customize)
 tests/                  — pytest test suite (all offline)
+scripts/
+  runner.sh             — toggle scheduled automation between GitHub-hosted and self-hosted (see docs/RUNNER.md)
 .github/workflows/      — GitHub Actions: daily digest + CI
 ```
 

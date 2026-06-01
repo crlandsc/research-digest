@@ -15,7 +15,13 @@ on:
 
 jobs:
   digest:
-    runs-on: ubuntu-latest
+    # Runner selection — see docs/RUNNER.md. Defaults to GitHub-hosted ubuntu-latest.
+    # arXiv throttles GitHub's *shared* egress IPs (D-031); a self-hosted runner on an
+    # always-on box uses an un-throttled IP. The AUTOMATION_RUNNER repo variable governs
+    # ALL scheduled automation (this digest + check-models.yml) so they move together:
+    # set it to your runner's label (e.g. 'self-hosted') to route here, unset it to fall
+    # back to GitHub-hosted. Unset for forks/other users => ubuntu-latest (unchanged).
+    runs-on: ${{ vars.AUTOMATION_RUNNER || 'ubuntu-latest' }}
     # 150 min covers three run attempts (~15 min each) with 30 + 60 min sleeps
     # between them when arXiv rate-limits the runner's egress IP.
     timeout-minutes: 150
@@ -76,11 +82,12 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           LOOKBACK_DAYS: ${{ steps.lookback.outputs.days }}
         run: |
-          # Workflow-level retry on arXiv rate-limit (CLI exit code 75).
-          # arXiv's Fastly CDN throttles shared CI egress IPs and the rate-limit
-          # window can persist many minutes — longer than in-process backoff can
-          # safely cover. On a 429-retry exit, sleep and re-run; later attempts
-          # may land on a different runner or after the throttle clears.
+          # Workflow-level retry on a transient arXiv failure (CLI exit code 75).
+          # arXiv's Fastly/Varnish CDN throttles (429) and overloads (503) shared
+          # CI egress IPs and the window can persist many minutes — longer than
+          # in-process backoff can safely cover. On an exit-75 (EX_TEMPFAIL), sleep
+          # and re-run; later attempts may land on a different runner or after the
+          # throttle/outage clears. (Exit 75 covers 429, any 5xx, and network errors.)
           # Sleep schedule between attempts: 30 min, then 60 min.
           set +e
           sleeps=(0 1800 3600)  # seconds before attempts 1, 2, 3
@@ -109,7 +116,7 @@ jobs:
           done
 
       - name: Upload digest artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: digest-${{ github.run_id }}

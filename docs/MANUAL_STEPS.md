@@ -139,6 +139,31 @@ Claude should verify by checking the scheduled job, deployment status, or a succ
 
 ---
 
+## MS-006 — Register a self-hosted runner (optional)
+- Status: Optional — implemented in repo (`digest.yml` + `check-models.yml` + `scripts/runner.sh`); registration not done
+- Needed for: Running the scheduled automation from an un-throttled IP instead of GitHub's shared, increasingly rate-limited runners
+- Trigger: Only if you want the scheduled workflows to run on your own always-on machine
+
+### Why human action is required
+Registering a self-hosted runner requires a one-time token from your fork's GitHub
+settings and installing the runner agent on a physical machine — both outside the repo.
+
+### Exact steps
+See **`docs/RUNNER.md`** for the full walkthrough. In brief:
+1. Fork → Settings → Actions → Runners → New self-hosted runner.
+2. Run the shown `./config.sh …` (the auto-assigned `self-hosted` label is enough), then `./svc.sh install && ./svc.sh start`.
+3. From a clone: `scripts/runner.sh local` (switch back any time with `scripts/runner.sh github`).
+
+### What to send back to Claude
+- Confirmation the runner shows **Idle** under Settings → Actions → Runners
+- Confirmation of which label it carries (default `self-hosted`)
+
+### Verification
+Trigger a manual run and confirm the scheduled job executed on the self-hosted runner
+and the arXiv fetch succeeded without 429/503 retries.
+
+---
+
 ## Required response template
 
 Whenever Claude is blocked by a human-only step, it must respond using exactly this structure:

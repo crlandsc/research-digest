@@ -8,6 +8,9 @@ on:
 
 jobs:
   test:
+    # Always GitHub-hosted — deliberately NOT on the AUTOMATION_RUNNER switch. This is CI
+    # triggered by pushes/PRs (incl. forks of this public repo); running untrusted PR code
+    # on a self-hosted runner is unsafe, and tests don't touch arXiv. See docs/RUNNER.md.
     runs-on: ubuntu-latest
 
     steps:

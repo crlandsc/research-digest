@@ -2,6 +2,11 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.9 — 2026-06-01
+- Fixed: a persistent arXiv 503 (or other 5xx, or an exhausted network error) on the final retry now exits 75 (EX_TEMPFAIL) so the workflow retries on a fresh runner, instead of exiting 1 and giving up after one in-process cycle. Renamed `ArxivRateLimitError` → `ArxivTransientError`; a shared `_is_retryable_status()` predicate keeps the in-loop retry decision and the post-exhaustion classification in sync (D-031)
+- Added a selectable runner for all scheduled automation: set the `AUTOMATION_RUNNER` repo variable (via `scripts/runner.sh {local|github|status}`) to run the daily digest **and** the weekly model-check on a self-hosted runner with an un-throttled IP instead of GitHub's shared runners. Defaults to GitHub-hosted; CI tests always stay GitHub-hosted. See [docs/RUNNER.md](docs/RUNNER.md) (D-032)
+- Bumped `actions/upload-artifact@v5 → @v6` (Node 20 runtime is forced off GitHub runners on 2026-06-16)
+
 ## 0.1.8 — 2026-05-20
 - Added `gemini-3.5-flash` (GA 2026-05-19) at position 1 of the fallback chain; chain length 5 → 6 (D-029)
 - New `research-digest check-models` CLI command + weekly cron that diffs `MODEL_CHAIN` against the live ListModels API and surfaces drift (D-030)

@@ -36,6 +36,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
+- Runner: both scheduled workflows (digest + check-models) selectable via the `AUTOMATION_RUNNER` repo var — default GitHub-hosted `ubuntu-latest`; set to a self-hosted label to run on an always-on box with an un-throttled IP. Toggle with `scripts/runner.sh {local|github|status}`. CI `tests.yml` always stays GitHub-hosted (fork-PR safety). See `docs/RUNNER.md` + D-032 (escapes the shared-CI-IP throttling that D-031 only softens)
 
 ### Known GitHub Actions cron limitations
 - Scheduled runs can be delayed 10-60+ minutes during high load ([docs](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule))
@@ -44,15 +45,18 @@ Milestone 5 — complete. All core features implemented and deployed.
 - Scheduled workflows are auto-disabled after 60 days of no repo activity on public repos
 - If a digest doesn't arrive, trigger manually from the Actions tab
 
-### arXiv rate-limit (HTTP 429) handling
-- arXiv's Fastly CDN throttles shared CI egress IPs; the rate-limit window can persist many minutes
-- In-process: exponential backoff with jitter (~30s, 60s, 120s, 240s, 480s cap), 7 attempts; honors Retry-After
+### arXiv transient-failure handling (rate-limit / 5xx / network)
+- arXiv's Fastly/Varnish CDN throttles (429) and overloads (503) shared CI egress IPs; the window can persist many minutes
+- In-process: exponential backoff with jitter (~30s, 60s, 120s, 240s, 480s cap), 7 attempts; honors Retry-After. Retryable set: any 5xx, 406, 408, 429, plus ConnectError/ReadTimeout
 - Initial 0-10s startup jitter to desync from other Actions cron jobs at :05
-- Persistent 429 → CLI exits 75 (EX_TEMPFAIL) → workflow retries up to 2 more times with 30 min then 60 min sleeps (fresh runner / cleared throttle)
+- Persistent transient failure (any retryable status — incl. 503 — or exhausted network error) → typed `ArxivTransientError` → CLI exits 75 (EX_TEMPFAIL) → workflow retries up to 2 more times with 30 min then 60 min sleeps (fresh runner / cleared throttle) (D-031)
+- A single `_is_retryable_status()` predicate drives both the in-loop retry and the exit-75 classification so they cannot drift (the 2026-06-01 failure was a final-attempt 503 mis-routed to exit 1)
 - Workflow timeout 150 min to accommodate three attempts
 
 ## Remaining
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-06-01 — added a selectable runner for all scheduled automation (`AUTOMATION_RUNNER` repo var + `scripts/runner.sh`) covering digest + check-models, so they can run on a self-hosted runner with an un-throttled IP; default stays GitHub-hosted and CI tests always do. Bumped `actions/upload-artifact@v5 → @v6` (Node 24). (see D-032)
+2026-06-01 — fixed transient-failure exit-code routing: a final-attempt arXiv 503 (and exhausted network errors) now raise typed `ArxivTransientError` → exit 75 → workflow retry, instead of exit 1 / give-up. Renamed `ArxivRateLimitError` → `ArxivTransientError` (see D-031)
 2026-05-20 — added GA `gemini-3.5-flash` (released 2026-05-19) at position 1 of chain; added drift-checker CLI + weekly cron (see D-029, D-030)
