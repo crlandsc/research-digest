@@ -2,6 +2,10 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.10 — 2026-06-01
+- Fixed: scheduled automation failed on a self-hosted **macOS** runner at "Set up Python" — `actions/setup-python`'s macOS installer runs `sudo installer` for the python.org `.pkg`, which needs passwordless sudo a self-hosted user typically lacks. `digest.yml` and `check-models.yml` now build a venv from the runner's pre-installed Python 3.12 on macOS self-hosted runners, while keeping `actions/setup-python` for GitHub-hosted and Linux self-hosted (D-033)
+- Changed: the daily digest is now triggered by an external scheduler calling `gh workflow run` (workflow_dispatch) instead of GitHub's `schedule:` cron, which is heavily delayed under load; the `schedule:` block is removed from `digest.yml` (left commented for forks that prefer GitHub cron). `check-models.yml` keeps its weekly cron (D-034)
+
 ## 0.1.9 — 2026-06-01
 - Fixed: a persistent arXiv 503 (or other 5xx, or an exhausted network error) on the final retry now exits 75 (EX_TEMPFAIL) so the workflow retries on a fresh runner, instead of exiting 1 and giving up after one in-process cycle. Renamed `ArxivRateLimitError` → `ArxivTransientError`; a shared `_is_retryable_status()` predicate keeps the in-loop retry decision and the post-exhaustion classification in sync (D-031)
 - Added a selectable runner for all scheduled automation: set the `AUTOMATION_RUNNER` repo variable (via `scripts/runner.sh {local|github|status}`) to run the daily digest **and** the weekly model-check on a self-hosted runner with an un-throttled IP instead of GitHub's shared runners. Defaults to GitHub-hosted; CI tests always stay GitHub-hosted. See [docs/RUNNER.md](docs/RUNNER.md) (D-032)

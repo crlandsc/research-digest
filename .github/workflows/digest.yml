@@ -1,11 +1,14 @@
 name: Daily Research Digest
 
 on:
-  # No `schedule:` trigger — GitHub's cron batches/delays scheduled events (often many
-  # minutes to hours under load). Instead, a launchd timer on the self-hosted Mac mini
-  # (~/Library/LaunchAgents/com.crlandsc.research-digest-trigger.plist) fires
-  # `gh workflow run` at 08:00 ET on weekdays; workflow_dispatch dispatches promptly and
-  # the run executes on the self-hosted runner. See docs/RUNNER.md.
+  # Triggered by an EXTERNAL scheduler calling `gh workflow run` (workflow_dispatch), not
+  # GitHub's `schedule:` cron, which batches/delays scheduled events (often many minutes to
+  # hours under load) while workflow_dispatch fires within seconds. The maintainer uses a
+  # local OS timer on the self-hosted runner — see docs/RUNNER.md ("Scheduling").
+  #
+  # Prefer GitHub's built-in cron (simplest, but delay-prone)? Uncomment:
+  # schedule:
+  #   - cron: '37 9 * * 1-5'   # ~5:37 AM ET weekdays; ':37' dodges the top-of-hour cron rush
   workflow_dispatch:
     inputs:
       lookback_days:
@@ -29,19 +32,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Python 3.12 (GitHub-hosted runners)
-        if: ${{ !vars.AUTOMATION_RUNNER }}
+      # setup-python everywhere EXCEPT a self-hosted macOS runner. On macOS its installer
+      # runs `sudo installer` for the python.org .pkg (needs passwordless sudo a self-hosted
+      # user usually lacks); GitHub-hosted (any OS) and Linux self-hosted are unaffected.
+      - name: Set up Python 3.12
+        if: ${{ !(vars.AUTOMATION_RUNNER != '' && runner.os == 'macOS') }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
-      # Self-hosted (AUTOMATION_RUNNER set): actions/setup-python's macOS installer
-      # runs `sudo installer` to put the python.org .pkg in /Library/Frameworks, which
-      # needs passwordless sudo the self-hosted user lacks. Instead build an isolated
-      # venv from the runner's pre-installed Python 3.12 (on PATH) and prepend it so the
-      # steps below resolve python/pip/research-digest from the venv.
-      - name: Set up Python venv (self-hosted runner)
-        if: ${{ vars.AUTOMATION_RUNNER }}
+      # Self-hosted macOS only: build an isolated venv from the runner's pre-installed
+      # Python 3.12 (must be on PATH — e.g. pyenv/Homebrew) and prepend it so the steps
+      # below resolve python/pip/research-digest from the venv. See docs/RUNNER.md (D-033).
+      - name: Set up Python 3.12 via venv (self-hosted macOS)
+        if: ${{ vars.AUTOMATION_RUNNER != '' && runner.os == 'macOS' }}
         run: |
           python3.12 -m venv "$RUNNER_TEMP/venv"
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"

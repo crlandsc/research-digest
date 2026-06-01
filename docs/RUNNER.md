@@ -11,7 +11,7 @@ A single repo variable, `AUTOMATION_RUNNER`, drives **both scheduled workflows t
 
 | Workflow | Trigger | On the switch? |
 | --- | --- | --- |
-| `digest.yml` (daily digest) | schedule + manual | ✅ yes |
+| `digest.yml` (daily digest) | external trigger + manual (no GitHub cron) | ✅ yes |
 | `check-models.yml` (weekly model-drift) | schedule + manual | ✅ yes |
 | `tests.yml` (CI) | push + pull_request | ❌ **never** — always GitHub-hosted |
 
@@ -48,9 +48,10 @@ runs-on: ${{ vars.AUTOMATION_RUNNER || 'ubuntu-latest' }}
 | `ubuntu-latest` | GitHub-hosted `ubuntu-latest` |
 | `self-hosted` (or your runner's label) | your self-hosted runner |
 
-Only **one** scheduler is ever in charge (GitHub's cron). Flipping the variable changes
-*where* the single scheduled run executes — so there's exactly one run and one email
-regardless of the setting. No double-sends, ever.
+The variable only changes *where* a job runs, not *when* it's triggered. The weekly
+model-check still uses GitHub's cron; the daily digest is triggered externally (see
+[Scheduling](#scheduling-on-time-without-github-cron-delays) below). Each run has exactly
+one trigger, so there are no double-sends.
 
 ### Flip it with one command
 
@@ -83,16 +84,46 @@ Do this on the always-on machine (e.g. your Mac Mini). It takes a few minutes.
    ./svc.sh install
    ./svc.sh start      # ./svc.sh status to check
    ```
+   > **macOS:** install the runner **outside** TCC-protected folders (`~/Desktop`, `~/Documents`, `~/Downloads`) — e.g. `~/actions-runner`. A background launchd agent can be silently denied access there (`Operation not permitted`), so `svc.sh` reports "started" but the runner never connects. The agent also only runs inside an active GUI login session, so enable auto-login (or log in after a reboot) for unattended use.
+
 3. Point the scheduled jobs at it: `scripts/runner.sh local`.
 
 ### Runner prerequisites
 
-Jobs run `pip install -e .` and need **Python 3.12** plus `git`. `actions/setup-python`
-will fetch 3.12 if it isn't present; if you use `pyenv`, having 3.12 installed satisfies
-it. Secrets (`GEMINI_API_KEY`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO`) come from
-the repo's Actions secrets — you do **not** need a local `.env` for the workflows. A
-single runner processes one job at a time, so the daily digest and the weekly model-check
-simply queue if they ever coincide.
+Jobs run `pip install -e .` and need **Python 3.12** plus `git`.
+
+- **Linux self-hosted or GitHub-hosted:** `actions/setup-python` fetches 3.12 automatically.
+- **macOS self-hosted:** `actions/setup-python` is **skipped** — its installer runs
+  `sudo installer` for the python.org `.pkg`, which needs passwordless sudo a self-hosted
+  user usually lacks. Instead the workflows build a venv from a **Python 3.12 already on the
+  runner user's `PATH`**, so install one first (e.g. `pyenv install 3.12` or
+  `brew install python@3.12`) and confirm `python3.12` resolves for that user (D-033).
+
+Secrets (`GEMINI_API_KEY`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO`) come from the
+repo's Actions secrets — you do **not** need a local `.env` for the workflows. A single
+runner processes one job at a time, so the daily digest and the weekly model-check simply
+queue if they ever coincide.
+
+## Scheduling: on-time, without GitHub cron delays
+
+GitHub's `schedule:` cron is queued globally and routinely fires **late** — often many
+minutes to hours under load — which is bad for a "morning" digest. `digest.yml` therefore
+ships with **no `schedule:` trigger**; it runs on `workflow_dispatch`, which dispatches
+within seconds. Trigger it on time from any always-on machine (ideally the same box as your
+self-hosted runner) with an OS timer running:
+
+```bash
+gh workflow run digest.yml --repo <your-username>/research-digest
+```
+
+- **macOS** — a launchd LaunchAgent with a `StartCalendarInterval` (uses local time, so it's
+  DST-aware). It runs in your logged-in session, so keep the box awake and logged in.
+- **Linux** — a user `crontab` entry or a `systemd` user timer calling the same command.
+
+`gh` must be authenticated as the user the timer runs as (`gh auth login`). Prefer GitHub's
+built-in cron instead? Uncomment the `schedule:` block at the top of `digest.yml` and skip
+the external timer. (`check-models.yml` keeps its weekly GitHub cron — a drift check
+tolerates the delay.)
 
 ## Security & fork-safety
 

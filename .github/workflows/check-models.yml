@@ -21,10 +21,20 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # setup-python everywhere except a self-hosted macOS runner (its installer needs
+      # passwordless sudo); macOS self-hosted builds a venv from the runner's Python.
+      # See digest.yml / docs/RUNNER.md (D-033).
       - name: Set up Python 3.12
+        if: ${{ !(vars.AUTOMATION_RUNNER != '' && runner.os == 'macOS') }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Set up Python 3.12 via venv (self-hosted macOS)
+        if: ${{ vars.AUTOMATION_RUNNER != '' && runner.os == 'macOS' }}
+        run: |
+          python3.12 -m venv "$RUNNER_TEMP/venv"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: pip install -e .
