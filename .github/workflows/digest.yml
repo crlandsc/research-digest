@@ -29,10 +29,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.12 (GitHub-hosted runners)
+        if: ${{ !vars.AUTOMATION_RUNNER }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      # Self-hosted (AUTOMATION_RUNNER set): actions/setup-python's macOS installer
+      # runs `sudo installer` to put the python.org .pkg in /Library/Frameworks, which
+      # needs passwordless sudo the self-hosted user lacks. Instead build an isolated
+      # venv from the runner's pre-installed Python 3.12 (on PATH) and prepend it so the
+      # steps below resolve python/pip/research-digest from the venv.
+      - name: Set up Python venv (self-hosted runner)
+        if: ${{ vars.AUTOMATION_RUNNER }}
+        run: |
+          python3.12 -m venv "$RUNNER_TEMP/venv"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: pip install -e .
