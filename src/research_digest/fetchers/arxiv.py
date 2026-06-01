@@ -35,8 +35,15 @@ DEFAULT_MAX_RETRIES = 6
 INITIAL_JITTER_MAX = 10.0
 
 
-class ArxivRateLimitError(RuntimeError):
-    """Raised when arXiv persistently returns 429 after all retries."""
+class ArxivTransientError(RuntimeError):
+    """Raised when arXiv persistently fails with a transient, retry-worthy condition.
+
+    Covers any retryable HTTP status (429 rate limit, 5xx, 406 CDN block, 408
+    timeout) or an exhausted network error (ConnectError/ReadTimeout) after all
+    in-process retries. Callers — and the CI workflow — treat this as distinct
+    from a hard failure: the CLI maps it to exit code 75 (EX_TEMPFAIL) so the
+    workflow re-runs on a fresh runner once the throttle/outage clears.
+    """
 
 _VERSION_RE = re.compile(r"v\d+$")
 
@@ -169,6 +176,17 @@ def _compute_backoff(attempt: int) -> float:
     return base + random.uniform(0, RETRY_JITTER)
 
 
+def _is_retryable_status(status: int) -> bool:
+    """Transient HTTP statuses worth retrying against arXiv's Fastly/Varnish CDN.
+
+    Single source of truth shared by the in-loop retry decision and the
+    post-exhaustion classification, so the two can never drift apart — a final
+    503 must escalate exactly like a final 429 (both are retry-worthy).
+    Covers any 5xx plus 406 (CDN block), 408 (timeout), 429 (rate limit).
+    """
+    return status >= 500 or status in (406, 408, 429)
+
+
 def _request_with_retry(
     client: httpx.Client,
     params: dict[str, str],
@@ -181,8 +199,9 @@ def _request_with_retry(
     GH Actions shared egress IPs are commonly rate limited by arXiv's Fastly CDN
     and the rate-limit window can persist several minutes, so we backoff
     exponentially up to RETRY_BACKOFF_CAP per attempt and honor Retry-After
-    when present. Persistent 429s raise ArxivRateLimitError so the caller
-    (and CI workflow) can distinguish rate limiting from other failures.
+    when present. Persistent transient failures (any retryable status, or an
+    exhausted network error) raise ArxivTransientError so the caller (and CI
+    workflow) can distinguish a retry-worthy outage from a hard failure.
     """
     url = httpx.URL(ARXIV_API_URL).copy_merge_params(params)
     logger.info("Request URL (first 200 chars): %s", str(url)[:200])
@@ -205,7 +224,11 @@ def _request_with_retry(
                 time.sleep(wait)
                 continue
             logger.error("All %d attempts exhausted (network error).", max_retries + 1)
-            raise
+            raise ArxivTransientError(
+                f"arXiv unreachable ({type(e).__name__}) after {max_retries + 1} attempts. "
+                "Likely transient network/CDN trouble from a shared CI egress IP; "
+                "retry from a fresh runner."
+            ) from e
 
         elapsed = time.monotonic() - start_time
         last_status = response.status_code
@@ -214,7 +237,7 @@ def _request_with_retry(
                      {k: v for k, v in response.headers.items()
                       if k.lower() in ("retry-after", "x-ratelimit-remaining", "x-cache", "server", "content-type")})
 
-        retryable = response.status_code >= 500 or response.status_code in (406, 408, 429)
+        retryable = _is_retryable_status(response.status_code)
         if retryable:
             if attempt < max_retries:
                 retry_after = response.headers.get("Retry-After")
@@ -240,10 +263,11 @@ def _request_with_retry(
         return response
 
     logger.error("All %d attempts exhausted. Last status: %s", max_retries + 1, last_status)
-    if last_status == 429:
-        raise ArxivRateLimitError(
-            f"arXiv rate limit (HTTP 429) persisted after {max_retries + 1} attempts. "
-            "Likely a shared CI egress IP is throttled by Fastly; retry from a fresh runner."
+    if last_status is not None and _is_retryable_status(last_status):
+        raise ArxivTransientError(
+            f"arXiv transient failure (HTTP {last_status}) persisted after {max_retries + 1} attempts. "
+            "Likely a shared CI egress IP is throttled, or the Fastly/Varnish CDN is overloaded; "
+            "retry from a fresh runner."
         )
     raise RuntimeError(f"arXiv API failed after {max_retries + 1} attempts (last status {last_status})")
 

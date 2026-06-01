@@ -10,7 +10,7 @@ from research_digest.config import ArxivSourceConfig
 from research_digest.fetchers.arxiv import (
     RETRY_BACKOFF_BASE,
     RETRY_BACKOFF_CAP,
-    ArxivRateLimitError,
+    ArxivTransientError,
     _compute_backoff,
     _extract_code_url,
     _extract_resource_links,
@@ -318,10 +318,31 @@ class TestRequestWithRetry:
         assert resp.status_code == 200
         assert client.get.call_count == 3
 
-    def test_persistent_429_raises_rate_limit_error(self) -> None:
+    def test_persistent_429_raises_transient_error(self) -> None:
         client = MagicMock()
         client.get.return_value = _mock_response(429, "Rate exceeded.")
-        with pytest.raises(ArxivRateLimitError):
+        with pytest.raises(ArxivTransientError):
+            _request_with_retry(client, {"q": "x"}, max_retries=2)
+        assert client.get.call_count == 3  # max_retries + 1
+
+    def test_persistent_503_raises_transient_error(self) -> None:
+        # arXiv's Fastly/Varnish CDN can return 503 on the final attempt (often
+        # after earlier 429s). An exhausted transient status must raise the typed
+        # error so the CLI exits 75 (EX_TEMPFAIL) and the workflow's delayed
+        # retry engages — not a generic failure that makes the workflow give up.
+        client = MagicMock()
+        client.get.return_value = _mock_response(503, "Service Unavailable")
+        with pytest.raises(ArxivTransientError):
+            _request_with_retry(client, {"q": "x"}, max_retries=2)
+        assert client.get.call_count == 3  # max_retries + 1
+
+    def test_persistent_network_error_raises_transient_error(self) -> None:
+        # Exhausted ConnectError/ReadTimeout is also transient — escalate to the
+        # typed error so the workflow retries on a fresh runner instead of
+        # bubbling the raw httpx error up as a generic (non-retry-worthy) failure.
+        client = MagicMock()
+        client.get.side_effect = httpx.ConnectError("boom")
+        with pytest.raises(ArxivTransientError):
             _request_with_retry(client, {"q": "x"}, max_retries=2)
         assert client.get.call_count == 3  # max_retries + 1
 
