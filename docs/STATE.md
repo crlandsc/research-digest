@@ -16,7 +16,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M5: resource links (Code, Model, Demo, Dataset, Colab from arXiv comment/abstract)
 - M5: summary attribution (model name shown per entry in digest)
 - M5: thinking model support (filters thought parts from Gemini 3 / Gemma 4 responses)
-- M5: scheduling (GitHub Actions weekday cron at 7am ET)
+- M5: scheduling (GitHub Actions weekday cron at ~5:37am ET)
 - M5: CI workflow (tests run on every push to main)
 - M5: LaTeX-to-Unicode conversion (pylatexenc converts math notation in email titles/summaries)
 - M5: timeout fallback fix (timeouts continue chain instead of skipping to extractive)
@@ -32,14 +32,14 @@ Milestone 5 — complete. All core features implemented and deployed.
 
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
-- Schedule: weekdays 11:07 UTC (~7:07am EDT / ~6:07am EST)
+- Schedule: weekdays 9:37 UTC (~5:37am EDT / ~4:37am EST)
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
 
 ### Known GitHub Actions cron limitations
 - Scheduled runs can be delayed 10-60+ minutes during high load ([docs](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule))
-- Jobs scheduled at the top of the hour (:00) are most affected; we use :05 offset to reduce this
+- Jobs scheduled at the top of the hour (:00) are most affected; we use :37/:47 offsets to reduce this
 - Missed jobs may not be retried ([discussion](https://github.com/orgs/community/discussions/27130))
 - Scheduled workflows are auto-disabled after 60 days of no repo activity on public repos
 - If a digest doesn't arrive, trigger manually from the Actions tab

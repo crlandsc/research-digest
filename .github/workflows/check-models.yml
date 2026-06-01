@@ -6,9 +6,9 @@ name: Check Gemini Model Drift
 
 on:
   schedule:
-    # Monday 14:17 UTC (~10:17 AM ET) — well after the daily digest finishes.
-    # :17 is off the cron-job rush hour to reduce GH Actions queue delay.
-    - cron: '17 14 * * 1'
+    # Monday 12:47 UTC (~8:47 AM ET) — well after the daily digest finishes.
+    # :47 is off the cron-job rush hour to reduce GH Actions queue delay.
+    - cron: '47 12 * * 1'
   workflow_dispatch:
 
 jobs:

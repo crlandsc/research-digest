@@ -2,10 +2,10 @@ name: Daily Research Digest
 
 on:
   schedule:
-    # ~7:07 AM ET weekdays (11:07 UTC during EDT, 12:07 UTC during EST)
-    # :07 (prime, not :00 or :05) avoids the heaviest GH Actions cron spikes;
+    # ~5:37 AM ET weekdays (9:37 UTC during EDT, 10:37 UTC during EST)
+    # :37 (prime-ish, not :00 or :05) avoids the heaviest GH Actions cron spikes;
     # see https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
-    - cron: '7 11 * * 1-5'
+    - cron: '37 9 * * 1-5'
   workflow_dispatch:
     inputs:
       lookback_days:
