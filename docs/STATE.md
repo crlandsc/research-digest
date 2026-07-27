@@ -9,18 +9,18 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
 - M3: ranking and digest generation (scoring, filters, Markdown renderer)
 - M4: usability hardening (CLI ergonomics, status command, edge case tests)
-- M5: LLM summarization (6-model fallback chain: Gemini 3.5 Flash → 3 Flash → 3.1 Flash Lite → Gemma 4 31B → 2.5 Flash → 2.5 Flash Lite)
-- M5: model-drift checker (weekly cron diffs MODEL_CHAIN against live ListModels API)
+- M5: LLM summarization (5-model fallback chain: Gemini 3.6 Flash → 3.5 Flash → 3.5 Flash Lite → 3.1 Flash Lite → Gemma 4 31B; D-035)
+- M5: model-drift checker (weekly diff of MODEL_CHAIN against live ListModels API, dispatched by the digest; D-030/D-036)
 - M5: email delivery (Gmail SMTP with newsletter-style HTML)
 - M5: topic grouping (papers grouped by keyword category in email)
 - M5: resource links (Code, Model, Demo, Dataset, Colab from arXiv comment/abstract)
 - M5: summary attribution (model name shown per entry in digest)
 - M5: thinking model support (filters thought parts from Gemini 3 / Gemma 4 responses)
-- M5: scheduling (GitHub Actions weekday cron at ~5:37am ET)
+- M5: scheduling (externally dispatched weekdays at 12:00 UTC; GitHub cron removed in D-034)
 - M5: CI workflow (tests run on every push to main)
 - M5: LaTeX-to-Unicode conversion (pylatexenc converts math notation in email titles/summaries)
 - M5: timeout fallback fix (timeouts continue chain instead of skipping to extractive)
-- 180 tests all passing
+- 226 tests all passing
 
 ## Working commands
 - `research-digest run` — full pipeline (fetch + rank + build)
@@ -32,7 +32,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
-- Schedule: weekdays 9:37 UTC (~5:37am EDT / ~4:37am EST)
+- Schedule: weekdays ~12:00 UTC, fired by an external OS timer calling `gh workflow run digest.yml` (D-034). No GitHub `schedule:` cron
 - Monday: 3-day lookback (covers weekend)
 - Tue-Fri: 1-day lookback
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
@@ -42,7 +42,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - Scheduled runs can be delayed 10-60+ minutes during high load ([docs](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule))
 - Jobs scheduled at the top of the hour (:00) are most affected; we use :37/:47 offsets to reduce this
 - Missed jobs may not be retried ([discussion](https://github.com/orgs/community/discussions/27130))
-- Scheduled workflows are auto-disabled after 60 days of no repo activity on public repos
+- Scheduled workflows are auto-disabled after 60 days of no repo activity on public repos. **This bit us on 2026-07-27**: `check-models.yml` was the last workflow on a `schedule:` cron and GitHub warned it would be disabled ~2026-07-31. Now mitigated - neither workflow uses `schedule:` (D-034, D-036)
 - If a digest doesn't arrive, trigger manually from the Actions tab
 
 ### arXiv transient-failure handling (rate-limit / 5xx / network)
@@ -57,6 +57,10 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-07-27 — refreshed the Gemini chain to five GA models (3.6 Flash lead; dropped the 3-flash preview and both 2.5 models, which shut down 2026-10-16), dropped the deprecated `temperature` param, moved the API key from `?key=` to the `x-goog-api-key` header, and added a log line when summaries fall back to extractive (see D-035)
+2026-07-27 — removed the last GitHub `schedule:` cron: `check-models.yml` is now dispatched by a Mondays-only job in `digest.yml`, because GitHub auto-disables scheduled workflows after 60 days of repo inactivity on public repos and had warned this one would be disabled ~2026-07-31 (see D-036)
+2026-06-01 — moved the daily digest off GitHub's `schedule:` cron to an external OS timer calling `gh workflow run digest.yml`, since scheduled events were firing hours late (see D-034)
+2026-06-01 — fixed scheduled automation on the self-hosted macOS runner: `actions/setup-python` needs passwordless sudo there, so both workflows now build a venv from the runner's pre-installed Python 3.12 on that platform only (see D-033)
 2026-06-01 — added a selectable runner for all scheduled automation (`AUTOMATION_RUNNER` repo var + `scripts/runner.sh`) covering digest + check-models, so they can run on a self-hosted runner with an un-throttled IP; default stays GitHub-hosted and CI tests always do. Bumped `actions/upload-artifact@v5 → @v6` (Node 24). (see D-032)
 2026-06-01 — fixed transient-failure exit-code routing: a final-attempt arXiv 503 (and exhausted network errors) now raise typed `ArxivTransientError` → exit 75 → workflow retry, instead of exit 1 / give-up. Renamed `ArxivRateLimitError` → `ArxivTransientError` (see D-031)
 2026-05-20 — added GA `gemini-3.5-flash` (released 2026-05-19) at position 1 of chain; added drift-checker CLI + weekly cron (see D-029, D-030)

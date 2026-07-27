@@ -42,15 +42,15 @@ This file is the prioritized build backlog.
 ## Milestone 5 — optional enhancements
 - [x] Add optional LLM summarization abstraction
 - [x] Add provider-backed summarization implementation (Gemini Flash)
-- [x] Add 5-model fallback chain for summarization reliability
+- [x] Add multi-model fallback chain for summarization reliability (5 GA models as of D-035)
 - [x] Add summary attribution (model name per digest entry)
 - [x] Add thinking model support (Gemini 3, Gemma 4)
 - [x] Add optional email delivery (Gmail SMTP)
-- [x] Add optional scheduling (GitHub Actions, weekdays 8am ET)
+- [x] Add optional scheduling (externally dispatched weekdays, 12:00 UTC; GitHub cron removed in D-034)
 - [x] Add optional deployment path (GitHub Actions workflow)
 - [x] Add LaTeX-to-Unicode conversion for email digest rendering
 - [x] Add `gemini-3.5-flash` to fallback chain (D-029)
-- [x] Add model-drift checker CLI + weekly cron (D-030)
+- [x] Add model-drift checker CLI + weekly run (D-030; cron replaced by digest dispatch in D-036)
 - [ ] Design source adapters for future music/audio venues (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP)
 
 ## Prioritization rule

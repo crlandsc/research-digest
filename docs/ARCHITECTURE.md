@@ -223,13 +223,14 @@ Every code change must include corresponding tests. Tests are the primary safegu
 - CI runs all tests on every push to main (`.github/workflows/tests.yml`)
 
 **Current coverage:**
-- 132 tests across 8 test files
+- 226 tests across 10 test files
 - `pytest` runs in <1 second
 
 ## Deployment
 
 GitHub Actions handles deployment:
-- `.github/workflows/digest.yml` — daily digest delivery (weekday cron)
+- `.github/workflows/digest.yml` — daily digest delivery (externally dispatched weekdays; D-034)
+- `.github/workflows/check-models.yml` — Gemini model-drift check (dispatched weekly by `digest.yml`; D-030/D-036)
 - `.github/workflows/tests.yml` — CI tests on every push/PR to main
 
 ## External service posture

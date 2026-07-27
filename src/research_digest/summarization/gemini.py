@@ -1,5 +1,6 @@
 """Google Gemini summarization provider with model fallback chain."""
 
+import hashlib
 import logging
 import os
 import time
@@ -13,25 +14,26 @@ logger = logging.getLogger(__name__)
 
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-# Fallback chain ordered by quality. Each model uses the same generateContent
-# REST API and is free-tier eligible. Verified against ai.google.dev on
-# 2026-05-20.
+# Fallback chain ordered by quality, spanning two serving tiers plus one non-Gemini
+# family so that a flash-wide outage cannot take out every entry (see D-035). Each
+# model uses the same generateContent REST API and is free-tier eligible. Verified
+# against ai.google.dev on 2026-07-27.
+#
+# Keep the rows below in sync with MODEL_CHAIN; TestModelChainContract enforces it.
 #
 # Model                    Status                   Notes
 # ------------------------ ------------------------ ------------------------------
-# gemini-3.5-flash         GA (2026-05-19)          Best Flash; outperforms 3.1 Pro
-# gemini-3-flash-preview   Preview                  No shutdown announced
+# gemini-3.6-flash         GA (2026-07-21)          Best Flash; 2.5-flash successor
+# gemini-3.5-flash         GA (2026-05-19)          No shutdown announced
+# gemini-3.5-flash-lite    GA (2026-07-21)          Lite tier; 3.1-lite successor
 # gemini-3.1-flash-lite    GA (2026-05-07)          Earliest shutdown 2027-05-07
-# gemma-4-31b-it           GA (2026-04-02)          —
-# gemini-2.5-flash         GA, deprecating          Shutdown 2026-10-16
-# gemini-2.5-flash-lite    GA, deprecating          Shutdown 2026-10-16
+# gemma-4-31b-it           GA (2026-04-02)          Non-Gemini, decorrelated tier
 MODEL_CHAIN = [
+    "gemini-3.6-flash",
     "gemini-3.5-flash",
-    "gemini-3-flash-preview",
+    "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemma-4-31b-it",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
 ]
 
 RETRIES_PER_MODEL = 2
@@ -61,8 +63,20 @@ class GeminiProvider(SummarizationProvider):
             raise ValueError(
                 "GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/apikey"
             )
-        self._client = httpx.Client(timeout=30.0)
-        logger.info("Gemini provider initialized (key: %s...)", self.api_key[:8])
+        # Key travels in a header, not a `?key=` query param: httpx logs full request
+        # URLs at INFO and the digest runs --verbose, so a query param lands in every
+        # log line (masked in Actions, unmasked locally). Matches model_check.py.
+        self._client = httpx.Client(
+            timeout=30.0,
+            headers={"x-goog-api-key": self.api_key},
+        )
+        # Fingerprint, not a prefix: "AIza" is constant across Gemini keys, so the old
+        # api_key[:8] leaked real characters while answering nothing a hash cannot.
+        logger.info(
+            "Gemini provider initialized (key fp: %s, chain head: %s)",
+            hashlib.sha256(self.api_key.encode()).hexdigest()[:8],
+            MODEL_CHAIN[0],
+        )
 
     def summarize_paper(self, paper: Paper) -> SummaryResult:
         prompt = _USER_TEMPLATE.format(
@@ -91,6 +105,20 @@ class GeminiProvider(SummarizationProvider):
                     text=extractive_summary(paper.abstract),
                     source="extractive",
                 )
+
+        # A Gemini outage is otherwise silent: every failure degrades to an extractive
+        # summary, so the digest still builds, the email still sends, and the run still
+        # exits 0. Summarize the damage once so it is greppable in the workflow log.
+        fell_back = sum(1 for r in results.values() if r.source == "extractive")
+        if papers and fell_back == len(papers):
+            logger.error(
+                "Gemini produced ZERO LLM summaries; all %d papers fell back to extractive",
+                fell_back,
+            )
+        elif fell_back:
+            logger.warning(
+                "Gemini fell back to extractive for %d/%d papers", fell_back, len(papers)
+            )
         return results
 
     def _call_with_fallback(self, prompt: str) -> SummaryResult:
@@ -98,15 +126,17 @@ class GeminiProvider(SummarizationProvider):
         payload = {
             "system_instruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
             "contents": [{"parts": [{"text": prompt}]}],
+            # No temperature/top_p/top_k: Google deprecated all three on 2026-07-21.
+            # Verified 2026-07-27 that gemini-3.6-flash ignores temperature outright
+            # (temperature=0.0 still returns varying output), so dropping it is a no-op.
             "generationConfig": {
-                "temperature": 0.3,
                 "maxOutputTokens": 8192,
             },
         }
 
         last_error = None
         for model in MODEL_CHAIN:
-            url = f"{API_BASE}/{model}:generateContent?key={self.api_key}"
+            url = f"{API_BASE}/{model}:generateContent"
             for attempt in range(RETRIES_PER_MODEL):
                 logger.debug("Requesting %s (attempt %d/%d)", model, attempt + 1, RETRIES_PER_MODEL)
                 try:

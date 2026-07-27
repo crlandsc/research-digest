@@ -138,3 +138,35 @@ jobs:
           name: digest-${{ github.run_id }}
           path: output/
           retention-days: 30
+
+  dispatch-model-check:
+    # Fires the weekly Gemini drift check from the digest's proven external trigger,
+    # so it needs neither a GitHub `schedule:` cron (auto-disabled after 60 days of
+    # repo inactivity on a public repo) nor a second OS timer that could die silently.
+    # See check-models.yml and D-036.
+    #
+    # Deliberately a separate job with no `needs:`, so a digest failure can never
+    # suppress the drift check and the dispatch never delays the digest. Runs
+    # GitHub-hosted regardless of AUTOMATION_RUNNER: it makes one API call, so it
+    # needs no un-throttled IP (D-031/D-032 do not apply), and `gh` is preinstalled.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # `gh workflow run` needs actions:write. The repo default is read-only, and
+      # digest.yml sets no workflow-level permissions, so this grant is required.
+      actions: write
+
+    steps:
+      - name: Dispatch drift check (Mondays only)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dow=$(date -u +%u)   # ISO day of week, 1 = Monday
+          if [ "$dow" != "1" ]; then
+            echo "UTC day-of-week is $dow, not Monday. Skipping drift-check dispatch."
+            exit 0
+          fi
+          echo "Monday: dispatching check-models.yml"
+          gh workflow run check-models.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME"
