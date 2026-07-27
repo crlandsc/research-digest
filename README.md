@@ -109,7 +109,7 @@ To get concise, newsletter-style summaries instead of abstract excerpts:
      provider: gemini
    ```
 
-The summarizer uses a 6-model fallback chain (Gemini 3.5 Flash → Gemini 3 Flash → Gemini 3.1 Flash Lite → Gemma 4 → Gemini 2.5 Flash → Gemini 2.5 Flash Lite), ordered by benchmark quality. All models are within Google's free tier, and the chain automatically falls back to the next model if one has an outage or hits rate limits.
+The summarizer uses a 5-model fallback chain (Gemini 3.6 Flash → Gemini 3.5 Flash → Gemini 3.5 Flash Lite → Gemini 3.1 Flash Lite → Gemma 4 31B), ordered by benchmark quality. All models are GA and within Google's free tier, and the chain automatically falls back to the next model if one has an outage or hits rate limits. The ordering deliberately spans two serving tiers plus one non-Gemini family, because in practice outages hit a whole tier at once: when both Flash models returned 503s on the same day, what recovered the run was a Flash Lite model.
 
 #### Keeping the model chain current
 
@@ -119,7 +119,9 @@ Google ships new Gemini models often and retires old ones on rolling dates. To d
 research-digest check-models     # diffs MODEL_CHAIN against ListModels; exit 1 on drift
 ```
 
-A weekly GitHub Actions cron ([`.github/workflows/check-models.yml`](.github/workflows/check-models.yml)) runs the same check every Monday and fails the job (which auto-emails the repo owner) when any chain model goes missing from the API or a newer family member appears. The chain is never auto-updated — promotion stays a human decision.
+[`.github/workflows/check-models.yml`](.github/workflows/check-models.yml) runs the same check weekly and fails the job (which auto-emails the repo owner) when any chain model goes missing from the API or a newer family member appears. The chain is never auto-updated — promotion stays a human decision.
+
+It is dispatched on Mondays by the daily digest workflow rather than by a GitHub `schedule:` cron, because GitHub auto-disables scheduled workflows after 60 days of repo inactivity on public repos, which would silently stop drift detection on a quiet repo. See [docs/RUNNER.md](docs/RUNNER.md) and D-036. Forks that prefer GitHub's cron can uncomment the `schedule:` block at the top of the workflow.
 
 ### 5. Add email delivery (optional)
 
@@ -202,7 +204,7 @@ config/
 tests/                  — pytest test suite (all offline)
 scripts/
   runner.sh             — toggle scheduled automation between GitHub-hosted and self-hosted (see docs/RUNNER.md)
-.github/workflows/      — GitHub Actions: daily digest + CI
+.github/workflows/      — GitHub Actions: daily digest, model-drift check, CI
 ```
 
 ## License

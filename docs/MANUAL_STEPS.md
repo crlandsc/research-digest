@@ -119,23 +119,46 @@ Claude should verify with a non-destructive local test if possible.
 
 ---
 
-## MS-005 — Configure scheduling or deployment
-- Status: Deferred
-- Needed for: Automated recurring runs or hosted execution
-- Trigger: Only after the local CLI workflow is working end-to-end
+## MS-005 — Set up the recurring trigger
+- Status: Done (external OS timer on the maintainer's always-on machine)
+- Needed for: Automated recurring digests
+- Trigger: Once, after the local CLI workflow is working end-to-end
 
 ### Why human action is required
-Cloud accounts, cron dashboards, and deployment settings typically require human access and approval.
+The timer lives on your own always-on machine, outside the repo, and `gh` must be
+authenticated as the user it runs as. Claude cannot install or verify it.
 
 ### Exact steps
-Claude must replace this placeholder section with the current platform-specific steps before asking for this task.
+Neither workflow uses a GitHub `schedule:` cron (D-034, D-036), so **one** timer drives
+everything. On an always-on machine, ideally the same box as your self-hosted runner:
+
+1. Authenticate `gh` as the user the timer will run as: `gh auth login`, then `gh auth status`.
+2. Create an OS timer that runs, once per weekday morning:
+   ```bash
+   gh workflow run digest.yml --repo <your-username>/research-digest
+   ```
+   - **macOS** — a launchd LaunchAgent with a `StartCalendarInterval` (local time, so
+     DST-aware). Use the **absolute** path to `gh`: LaunchAgents get a minimal `PATH` and
+     will not find a Homebrew `gh` at `/opt/homebrew/bin/gh`. Set `StandardOutPath` and
+     `StandardErrorPath` so failures leave a trace.
+   - **Linux** — a user `crontab` entry or a `systemd` user timer calling the same command.
+3. Nothing extra is needed for the weekly model-drift check. `digest.yml` dispatches
+   `check-models.yml` itself when the UTC day-of-week is Monday (D-036).
+
+Prefer GitHub's built-in cron instead? Uncomment the `schedule:` block at the top of
+`digest.yml` and skip the timer, but note GitHub auto-disables scheduled workflows after
+60 days of repo inactivity on public repos, and fires them late under load.
 
 ### What to send back to Claude
-- Confirmation that the platform setup is complete
-- Any non-secret identifiers needed by the app
+- Confirmation that the timer is installed and `gh auth status` is clean
+- The schedule you chose (day-of-week and local time)
 
 ### Verification
-Claude should verify by checking the scheduled job, deployment status, or a successful dry run.
+Fire the timer manually rather than waiting a day. On macOS:
+`launchctl kickstart -k "gui/$(id -u)/<LABEL>"`. Then confirm a run appears:
+`gh run list --workflow=digest.yml --limit 3` should show `event=workflow_dispatch`.
+On the following Monday, confirm `gh run list --workflow=check-models.yml --limit 3`
+shows a `workflow_dispatch` run shortly after the digest.
 
 ---
 

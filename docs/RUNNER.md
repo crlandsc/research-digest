@@ -12,7 +12,7 @@ A single repo variable, `AUTOMATION_RUNNER`, drives **both scheduled workflows t
 | Workflow | Trigger | On the switch? |
 | --- | --- | --- |
 | `digest.yml` (daily digest) | external trigger + manual (no GitHub cron) | ✅ yes |
-| `check-models.yml` (weekly model-drift) | schedule + manual | ✅ yes |
+| `check-models.yml` (weekly model-drift) | dispatched by `digest.yml` on Mondays + manual | ✅ yes |
 | `tests.yml` (CI) | push + pull_request | ❌ **never** — always GitHub-hosted |
 
 Keeping all *scheduled* automation in one place (rather than some on GitHub, some
@@ -48,8 +48,9 @@ runs-on: ${{ vars.AUTOMATION_RUNNER || 'ubuntu-latest' }}
 | `ubuntu-latest` | GitHub-hosted `ubuntu-latest` |
 | `self-hosted` (or your runner's label) | your self-hosted runner |
 
-The variable only changes *where* a job runs, not *when* it's triggered. The weekly
-model-check still uses GitHub's cron; the daily digest is triggered externally (see
+The variable only changes *where* a job runs, not *when* it's triggered. Neither workflow
+uses GitHub's cron any more: the daily digest is triggered externally, and the weekly
+model-check is dispatched by the digest on Mondays (see
 [Scheduling](#scheduling-on-time-without-github-cron-delays) below). Each run has exactly
 one trigger, so there are no double-sends.
 
@@ -102,7 +103,9 @@ Jobs run `pip install -e .` and need **Python 3.12** plus `git`.
 Secrets (`GEMINI_API_KEY`, `GMAIL_APP_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO`) come from the
 repo's Actions secrets — you do **not** need a local `.env` for the workflows. A single
 runner processes one job at a time, so the daily digest and the weekly model-check simply
-queue if they ever coincide.
+queue if they ever coincide. On Mondays they always coincide by design, since the digest
+dispatches the drift check: the check waits for the digest to finish, which is fine for a
+drift check and still earlier than GitHub's cron ever managed.
 
 ## Scheduling: on-time, without GitHub cron delays
 
@@ -122,8 +125,27 @@ gh workflow run digest.yml --repo <your-username>/research-digest
 
 `gh` must be authenticated as the user the timer runs as (`gh auth login`). Prefer GitHub's
 built-in cron instead? Uncomment the `schedule:` block at the top of `digest.yml` and skip
-the external timer. (`check-models.yml` keeps its weekly GitHub cron — a drift check
-tolerates the delay.)
+the external timer.
+
+### The weekly drift check rides the same timer
+
+`check-models.yml` has **no `schedule:` trigger either**. Instead, `digest.yml` carries a
+small `dispatch-model-check` job that runs `gh workflow run check-models.yml` when the UTC
+day-of-week is Monday, so the drift check reuses the one timer you already set up. Two
+reasons it is not a GitHub cron: on a **public** repo GitHub auto-disables *scheduled*
+workflows after 60 days of repo inactivity, which would silently stop drift detection
+exactly when a quiet repo most needs it; and in practice that cron fired 2-3.5 hours late
+every week. See D-036.
+
+This means there is nothing extra to install: no second LaunchAgent, no cron entry, and
+no work on the self-hosted box. It also means the drift check depends on the digest's
+timer, which is a deliberate trade: if that timer stops, the digest stops landing in your
+inbox and you notice immediately, whereas a silently disabled cron gives no signal at all.
+
+The dispatch job runs on a GitHub-hosted runner regardless of `AUTOMATION_RUNNER` (it
+makes a single API call, so it needs no un-throttled IP) and carries a job-level
+`actions: write` permission, which `gh workflow run` requires because the repo's default
+workflow token is read-only.
 
 ## Security & fork-safety
 
@@ -132,8 +154,8 @@ tolerates the delay.)
 - **CI tests never touch your runner.** `tests.yml` runs on `push`/`pull_request`
   (including PRs from forks of this public repo). GitHub warns that self-hosted runners on
   public repos can execute untrusted fork code, so `tests.yml` is hardcoded to
-  `ubuntu-latest` and is **not** on the switch. The two scheduled workflows trigger only
-  on `schedule`/`workflow_dispatch`, which forks cannot fire, so they're safe to self-host.
+  `ubuntu-latest` and is **not** on the switch. The two scheduled workflows now trigger
+  only on `workflow_dispatch`, which forks cannot fire, so they're safe to self-host.
   Do not add a `pull_request` trigger to the scheduled workflows, and do not route
   `tests.yml` to a self-hosted runner.
 
@@ -142,3 +164,14 @@ tolerates the delay.)
 After `scripts/runner.sh local`, trigger a manual run (`gh workflow run "Daily Research
 Digest"` or the Actions tab) and confirm in the run's logs that the job ran on your
 self-hosted runner and the arXiv fetch succeeded without `429`/`503` retries.
+
+To confirm the drift check is still wired up, check that a `workflow_dispatch` run of
+`check-models.yml` appears each Monday shortly after the digest:
+
+```bash
+gh run list --workflow=check-models.yml --json event,createdAt,conclusion --limit 10
+```
+
+Every entry should read `workflow_dispatch`; a `schedule` entry means the commented-out
+cron block was re-enabled. If Mondays are missing entirely, read the digest run's
+`dispatch-model-check` job log: a `403` points at the `actions: write` permission.
