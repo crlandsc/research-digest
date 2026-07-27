@@ -282,6 +282,119 @@ class TestGeminiFallbackChain:
         assert len(cap.calls) == len(short_chain) * 2
 
 
+class TestGeminiRequestShape:
+    """Nothing here was covered before: the post mock only ever receives `json=`, so
+    the URL, the headers and the payload could all regress silently.
+    """
+
+    def test_key_travels_in_header_not_url(self, gemini_provider, short_chain) -> None:
+        cap = _Capture([_ok_response()])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            gemini_provider.summarize_paper(_paper())
+
+        url = cap.urls[0]
+        assert "key=" not in url
+        assert FAKE_KEY not in url
+        assert url.startswith("https://generativelanguage.googleapis.com/v1beta/models/")
+        assert url.endswith(":generateContent")
+        # The header is a client-level default, so the post mock cannot observe it.
+        # Asserting kwargs["headers"] here would pass vacuously; assert where it lives.
+        assert gemini_provider._client.headers["x-goog-api-key"] == FAKE_KEY
+
+    def test_generation_config_has_no_deprecated_sampling_params(
+        self, gemini_provider, short_chain
+    ) -> None:
+        cap = _Capture([_ok_response()])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            gemini_provider.summarize_paper(_paper())
+
+        gen = cap.payloads[0]["generationConfig"]
+        assert gen == {"maxOutputTokens": 8192}
+        for deprecated in ("temperature", "top_p", "topP", "top_k", "topK"):
+            assert deprecated not in gen
+
+    def test_payload_carries_system_prompt_and_paper(
+        self, gemini_provider, short_chain
+    ) -> None:
+        cap = _Capture([_ok_response()])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            gemini_provider.summarize_paper(_paper(title="Widget Nets"))
+
+        body = cap.payloads[0]
+        assert set(body) == {"system_instruction", "contents", "generationConfig"}
+        assert body["system_instruction"]["parts"][0]["text"].startswith("You write concise")
+        assert "Widget Nets" in body["contents"][0]["parts"][0]["text"]
+
+
+class TestGeminiWireFormat:
+    def test_real_httpx_request_carries_header_and_clean_url(
+        self, monkeypatch: pytest.MonkeyPatch, short_chain
+    ) -> None:
+        """Exercises the genuine httpx path (header merge, URL build, serialisation)
+        with only the socket replaced, since asserting `_client.headers` proves the
+        dict was populated but not that httpx transmits it.
+
+        The transport MUST be passed at construction. Assigning
+        `provider._client._transport` instead is silently ignored when proxy env vars
+        are set, because httpx resolves transports through `_mounts`, which
+        trust_env=True pre-populates -- and the request then hits the real network.
+        """
+        import json
+
+        seen: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(request)
+            return httpx.Response(
+                200, json={"candidates": [{"content": {"parts": [{"text": "wire ok"}]}}]}
+            )
+
+        real_client_cls = httpx.Client
+
+        def _mock_client(*args, **kwargs):
+            kwargs["transport"] = httpx.MockTransport(handler)
+            return real_client_cls(*args, **kwargs)
+
+        monkeypatch.setenv("GEMINI_API_KEY", FAKE_KEY)
+        monkeypatch.setattr(httpx, "Client", _mock_client)
+        from research_digest.summarization.gemini import GeminiProvider
+
+        result = GeminiProvider().summarize_paper(_paper())
+
+        assert result.text == "wire ok"
+        assert len(seen) == 1
+        request = seen[0]
+        assert request.headers["x-goog-api-key"] == FAKE_KEY
+        assert "key=" not in str(request.url)
+        assert FAKE_KEY not in str(request.url)
+        assert json.loads(request.content)["generationConfig"] == {"maxOutputTokens": 8192}
+
+
+class TestGeminiSecretHygiene:
+    def test_init_logs_neither_key_nor_prefix(
+        self, monkeypatch: pytest.MonkeyPatch, caplog
+    ) -> None:
+        monkeypatch.setenv("GEMINI_API_KEY", FAKE_KEY)
+        from research_digest.summarization.gemini import GeminiProvider
+
+        with caplog.at_level(logging.DEBUG):
+            GeminiProvider()
+
+        blob = "\n".join(r.getMessage() for r in caplog.records)
+        assert FAKE_KEY not in blob
+        assert FAKE_KEY[:8] not in blob  # the pre-0.1.11 line emitted exactly this
+
+    def test_key_never_reaches_any_log_record_during_a_call(
+        self, gemini_provider, short_chain, caplog
+    ) -> None:
+        cap = _Capture([_ok_response()])
+        with caplog.at_level(logging.DEBUG):
+            with patch.object(gemini_provider._client, "post", side_effect=cap):
+                gemini_provider.summarize_paper(_paper())
+
+        assert FAKE_KEY not in "\n".join(r.getMessage() for r in caplog.records)
+
+
 class TestExtractiveFallbackVisibility:
     """A Gemini outage still produces a digest and exit 0, so the only signal is the
     log. These pin that signal.

@@ -1,5 +1,6 @@
 """Google Gemini summarization provider with model fallback chain."""
 
+import hashlib
 import logging
 import os
 import time
@@ -62,8 +63,20 @@ class GeminiProvider(SummarizationProvider):
             raise ValueError(
                 "GEMINI_API_KEY not set. Get a free key at https://aistudio.google.com/apikey"
             )
-        self._client = httpx.Client(timeout=30.0)
-        logger.info("Gemini provider initialized (key: %s...)", self.api_key[:8])
+        # Key travels in a header, not a `?key=` query param: httpx logs full request
+        # URLs at INFO and the digest runs --verbose, so a query param lands in every
+        # log line (masked in Actions, unmasked locally). Matches model_check.py.
+        self._client = httpx.Client(
+            timeout=30.0,
+            headers={"x-goog-api-key": self.api_key},
+        )
+        # Fingerprint, not a prefix: "AIza" is constant across Gemini keys, so the old
+        # api_key[:8] leaked real characters while answering nothing a hash cannot.
+        logger.info(
+            "Gemini provider initialized (key fp: %s, chain head: %s)",
+            hashlib.sha256(self.api_key.encode()).hexdigest()[:8],
+            MODEL_CHAIN[0],
+        )
 
     def summarize_paper(self, paper: Paper) -> SummaryResult:
         prompt = _USER_TEMPLATE.format(
@@ -113,15 +126,17 @@ class GeminiProvider(SummarizationProvider):
         payload = {
             "system_instruction": {"parts": [{"text": _SYSTEM_PROMPT}]},
             "contents": [{"parts": [{"text": prompt}]}],
+            # No temperature/top_p/top_k: Google deprecated all three on 2026-07-21.
+            # Verified 2026-07-27 that gemini-3.6-flash ignores temperature outright
+            # (temperature=0.0 still returns varying output), so dropping it is a no-op.
             "generationConfig": {
-                "temperature": 0.3,
                 "maxOutputTokens": 8192,
             },
         }
 
         last_error = None
         for model in MODEL_CHAIN:
-            url = f"{API_BASE}/{model}:generateContent?key={self.api_key}"
+            url = f"{API_BASE}/{model}:generateContent"
             for attempt in range(RETRIES_PER_MODEL):
                 logger.debug("Requesting %s (attempt %d/%d)", model, attempt + 1, RETRIES_PER_MODEL)
                 try:
