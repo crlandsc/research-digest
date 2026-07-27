@@ -1,14 +1,19 @@
 """Tests for summarization providers."""
 
+import logging
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
 from research_digest.config import AppConfig
 from research_digest.models import Paper
 from research_digest.summarization.extractive import ExtractiveProvider
 from research_digest.summarization.providers import get_provider
+
+# Distinctive so hygiene tests can assert it never reaches a log record or a URL.
+FAKE_KEY = "AIzaTESTKEY0000000000000000000000000000"
 
 
 def _paper(**kw) -> Paper:
@@ -21,6 +26,85 @@ def _paper(**kw) -> Paper:
     )
     defaults.update(kw)
     return Paper(**defaults)
+
+
+def _ok_response(text: str = "A concise summary of the paper.") -> MagicMock:
+    r = MagicMock()
+    r.status_code = 200
+    r.json.return_value = {"candidates": [{"content": {"parts": [{"text": text}]}}]}
+    return r
+
+
+def _status_response(code: int) -> MagicMock:
+    r = MagicMock()
+    r.status_code = code
+    return r
+
+
+class _Capture:
+    """Records (url, kwargs) per call and replays a scripted response list; the last
+    entry repeats once exhausted, so chain-exhaustion tests need only one entry.
+    Signature matches the pre-existing stub style, `def mock_post(url, **kwargs)`.
+    """
+
+    def __init__(self, responses) -> None:
+        self._responses = list(responses)
+        self.calls: list[tuple[str, dict]] = []
+
+    def __call__(self, url, **kwargs):
+        self.calls.append((url, kwargs))
+        r = self._responses[min(len(self.calls) - 1, len(self._responses) - 1)]
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+    @property
+    def urls(self) -> list[str]:
+        return [u for u, _ in self.calls]
+
+    @property
+    def payloads(self) -> list[dict]:
+        return [kw["json"] for _, kw in self.calls]
+
+    @property
+    def models(self) -> list[str]:
+        """Model id parsed back out of each URL, so chain-walk tests can assert which
+        models were tried and in what order. URL cleanliness is asserted separately
+        in TestGeminiRequestShape; this deliberately tolerates a query string so the
+        two concerns stay independent.
+        """
+        return [
+            u.rsplit("/", 1)[-1].split("?", 1)[0].removesuffix(":generateContent")
+            for u in self.urls
+        ]
+
+
+@pytest.fixture
+def gemini_provider(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("GEMINI_API_KEY", FAKE_KEY)
+    from research_digest.summarization.gemini import GeminiProvider
+    return GeminiProvider()
+
+
+@pytest.fixture
+def short_chain(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Behaviour tests run against a synthetic chain so that editing the real
+    MODEL_CHAIN never touches them. The real chain is pinned only in
+    TestModelChainContract.
+    """
+    chain = ["model-a", "model-b", "model-c"]
+    monkeypatch.setattr("research_digest.summarization.gemini.MODEL_CHAIN", chain)
+    return chain
+
+
+@pytest.fixture
+def no_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RETRY_DELAY (3s) and the 4s inter-paper pacing would otherwise add seconds to
+    every chain-walk test. gemini.py does `import time`, so patch the module
+    attribute it resolves through.
+    """
+    import research_digest.summarization.gemini as gm
+    monkeypatch.setattr(gm.time, "sleep", lambda *_: None)
 
 
 class TestExtractiveProvider:
@@ -70,64 +154,129 @@ class TestProviderFactory:
             get_provider(cfg)
 
 
-class TestGeminiProvider:
-    def test_summarize_paper_calls_api(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
-        from research_digest.summarization.gemini import GeminiProvider
+class TestModelChainContract:
+    """The single place the real chain is asserted. Every behaviour test below uses
+    the synthetic `short_chain` fixture, so editing MODEL_CHAIN breaks exactly this
+    class, deliberately and legibly.
+    """
 
-        provider = GeminiProvider()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "candidates": [{"content": {"parts": [{"text": "A concise summary of the paper."}]}}]
+    def test_chain_is_exactly_as_documented(self) -> None:
+        from research_digest.summarization.gemini import MODEL_CHAIN
+        assert MODEL_CHAIN == [
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemma-4-31b-it",
+        ]
+
+    def test_chain_excludes_retired_models(self) -> None:
+        from research_digest.summarization.gemini import MODEL_CHAIN
+        retired = {
+            "gemini-2.5-flash", "gemini-2.5-flash-lite",
+            "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview",
         }
-        mock_response.raise_for_status = MagicMock()
+        assert not (set(MODEL_CHAIN) & retired)
 
-        with patch.object(provider._client, "post", return_value=mock_response):
-            result = provider.summarize_paper(_paper())
+    def test_chain_entries_unique(self) -> None:
+        from research_digest.summarization.gemini import MODEL_CHAIN
+        assert len(MODEL_CHAIN) == len(set(MODEL_CHAIN))
+
+    def test_status_table_documents_every_chain_model(self) -> None:
+        """The comment table above MODEL_CHAIN is documentation that rots silently.
+        Pin it both ways so a chain edit without a table edit fails here.
+        """
+        import inspect
+        from research_digest.summarization import gemini
+        header, _, _ = inspect.getsource(gemini).partition("MODEL_CHAIN = [")
+        documented = {
+            line[2:].split()[0]
+            for line in header.splitlines()
+            if line.startswith("# gemini-") or line.startswith("# gemma-")
+        }
+        assert documented == set(gemini.MODEL_CHAIN)
+
+
+class TestGeminiProvider:
+    def test_summarize_paper_calls_api(self, gemini_provider, short_chain) -> None:
+        cap = _Capture([_ok_response()])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            result = gemini_provider.summarize_paper(_paper())
 
         assert result.text == "A concise summary of the paper."
-        assert result.source == "gemini-3.5-flash"
+        assert result.source == short_chain[0]
+        assert len(cap.calls) == 1
 
-    def test_fallback_on_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
-        from research_digest.summarization.gemini import GeminiProvider
-
-        provider = GeminiProvider()
-        with patch.object(provider._client, "post", side_effect=Exception("API down")):
-            results = provider.summarize_papers([_paper()])
+    def test_fallback_on_failure(self, gemini_provider) -> None:
+        with patch.object(gemini_provider._client, "post", side_effect=Exception("API down")):
+            results = gemini_provider.summarize_papers([_paper()])
 
         # Should fall back to extractive
         assert "2401.00001" in results
         assert "First sentence" in results["2401.00001"].text
         assert results["2401.00001"].source == "extractive"
 
-    def test_timeout_falls_through_to_next_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
+
+class TestGeminiFallbackChain:
+    """Chain-walk behaviour, asserted against `short_chain` so these tests survive
+    any edit to the real MODEL_CHAIN.
+    """
+
+    def test_timeout_falls_through_to_next_model(
+        self, gemini_provider, short_chain, no_sleep
+    ) -> None:
         """Timeout on one model should try the next, not skip to extractive."""
-        monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
-        import httpx as _httpx
-        from research_digest.summarization.gemini import GeminiProvider
-
-        provider = GeminiProvider()
-
-        ok_response = MagicMock()
-        ok_response.status_code = 200
-        ok_response.json.return_value = {
-            "candidates": [{"content": {"parts": [{"text": "Summary from later model."}]}}]
-        }
-
-        call_count = 0
-        def mock_post(url, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            # First 4 models timeout, 5th succeeds (gemini-2.5-flash)
-            if call_count <= 4:
-                raise _httpx.ReadTimeout("timed out")
-            return ok_response
-
-        with patch.object(provider._client, "post", side_effect=mock_post):
-            result = provider.summarize_paper(_paper())
+        cap = _Capture([
+            httpx.ReadTimeout("timed out"),
+            httpx.ReadTimeout("timed out"),
+            _ok_response("Summary from later model."),
+        ])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            result = gemini_provider.summarize_paper(_paper())
 
         assert result.text == "Summary from later model."
-        assert result.source == "gemini-2.5-flash"
-        assert call_count == 5  # 4 timeouts + 1 success
+        assert result.source == short_chain[2]
+        # Visited every model, in order, exactly once: timeouts are not retried.
+        assert cap.models == short_chain
+        assert len(cap.calls) == 3
+
+    def test_non_retryable_status_advances_immediately(
+        self, gemini_provider, short_chain, no_sleep
+    ) -> None:
+        cap = _Capture([
+            _status_response(400),
+            _status_response(400),
+            _ok_response("third model ok"),
+        ])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            result = gemini_provider.summarize_paper(_paper())
+
+        assert result.source == short_chain[2]
+        # 400 is not in (429, 503), so one attempt per model.
+        assert cap.models == short_chain
+        assert len(cap.calls) == 3
+
+    def test_retryable_status_retries_same_model_then_advances(
+        self, gemini_provider, short_chain, no_sleep
+    ) -> None:
+        cap = _Capture([
+            _status_response(429),
+            _status_response(429),
+            _ok_response("second model ok"),
+        ])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            result = gemini_provider.summarize_paper(_paper())
+
+        assert result.source == short_chain[1]
+        # RETRIES_PER_MODEL == 2, so model-a is attempted twice before advancing.
+        assert cap.models == ["model-a", "model-a", "model-b"]
+
+    def test_exhausted_chain_falls_back_to_extractive(
+        self, gemini_provider, short_chain, no_sleep
+    ) -> None:
+        cap = _Capture([_status_response(503)])
+        with patch.object(gemini_provider._client, "post", side_effect=cap):
+            results = gemini_provider.summarize_papers([_paper()])
+
+        assert results["2401.00001"].source == "extractive"
+        assert len(cap.calls) == len(short_chain) * 2
