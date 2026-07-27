@@ -1,14 +1,24 @@
 name: Check Gemini Model Drift
 
-# Weekly diff of MODEL_CHAIN against Google's ListModels API.
+# Diff of MODEL_CHAIN against Google's ListModels API.
 # Job failure auto-emails the repo owner via GitHub's default notification
 # settings, so any drift surfaces without extra plumbing.
 
 on:
-  schedule:
-    # Monday 12:47 UTC (~8:47 AM ET) — well after the daily digest finishes.
-    # :47 is off the cron-job rush hour to reduce GH Actions queue delay.
-    - cron: '47 12 * * 1'
+  # Dispatched weekly by the daily digest on Mondays (digest.yml's
+  # dispatch-model-check job), NOT by GitHub's `schedule:` cron. Two reasons:
+  #   1. This is a public repo, and GitHub auto-disables *scheduled* workflows after
+  #      60 days of repo inactivity, which would silently kill the drift check
+  #      exactly when a quiet repo most needs it. It warned this one would be
+  #      disabled on ~2026-07-31.
+  #   2. The cron was firing 2-3.5 hours late every week (12:47 UTC scheduled;
+  #      15:30, 14:57, 15:34, 16:05 and 16:27 observed).
+  # Riding the digest's already-proven external trigger adds no new timer that can
+  # fail silently. Keep `workflow_dispatch` - it is now the only trigger. See D-036.
+  #
+  # Prefer GitHub's built-in cron (simplest, but auto-disables on inactivity)? Uncomment:
+  # schedule:
+  #   - cron: '47 12 * * 1'   # Mon 12:47 UTC (~8:47 AM ET); ':47' dodges the cron rush
   workflow_dispatch:
 
 jobs:

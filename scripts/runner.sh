@@ -4,7 +4,10 @@
 #
 # Governs BOTH scheduled workflows together (they read the same repo variable):
 #   - .github/workflows/digest.yml        (daily research digest)
-#   - .github/workflows/check-models.yml  (weekly Gemini model-drift check)
+#   - .github/workflows/check-models.yml  (Gemini model-drift check, dispatched
+#                                          weekly by digest.yml on Mondays; D-036)
+# Exception: digest.yml's small dispatch-model-check job is pinned to a
+# GitHub-hosted runner and is not on the switch (one API call, no IP concerns).
 # CI tests (.github/workflows/tests.yml) are NOT affected — they always run on
 # GitHub-hosted runners (untrusted fork PRs must never hit a self-hosted runner).
 #
