@@ -280,3 +280,60 @@ class TestGeminiFallbackChain:
 
         assert results["2401.00001"].source == "extractive"
         assert len(cap.calls) == len(short_chain) * 2
+
+
+class TestExtractiveFallbackVisibility:
+    """A Gemini outage still produces a digest and exit 0, so the only signal is the
+    log. These pin that signal.
+    """
+
+    @staticmethod
+    def _two_papers() -> list[Paper]:
+        return [_paper(external_id="p1"), _paper(external_id="p2")]
+
+    def test_total_failure_logs_error(
+        self, gemini_provider, short_chain, no_sleep, caplog
+    ) -> None:
+        cap = _Capture([_status_response(503)])
+        with caplog.at_level(logging.WARNING):
+            with patch.object(gemini_provider._client, "post", side_effect=cap):
+                results = gemini_provider.summarize_papers(self._two_papers())
+
+        assert all(r.source == "extractive" for r in results.values())
+        errors = [r.getMessage() for r in caplog.records if r.levelno == logging.ERROR]
+        assert any("ZERO LLM summaries" in m and "all 2 papers" in m for m in errors)
+
+    def test_partial_failure_logs_warning(
+        self, gemini_provider, short_chain, no_sleep, caplog
+    ) -> None:
+        # First call succeeds (paper 1); every later call 503s, exhausting the chain
+        # for paper 2, since _Capture repeats its last scripted response.
+        cap = _Capture([_ok_response(), _status_response(503)])
+        with caplog.at_level(logging.WARNING):
+            with patch.object(gemini_provider._client, "post", side_effect=cap):
+                results = gemini_provider.summarize_papers(self._two_papers())
+
+        assert results["p1"].source == short_chain[0]
+        assert results["p2"].source == "extractive"
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("fell back to extractive for 1/2 papers" in m for m in warnings)
+        assert not [r for r in caplog.records if r.levelno == logging.ERROR
+                    and "ZERO LLM summaries" in r.getMessage()]
+
+    def test_full_success_logs_no_fallback_message(
+        self, gemini_provider, short_chain, no_sleep, caplog
+    ) -> None:
+        cap = _Capture([_ok_response()])
+        with caplog.at_level(logging.WARNING):
+            with patch.object(gemini_provider._client, "post", side_effect=cap):
+                results = gemini_provider.summarize_papers(self._two_papers())
+
+        assert all(r.source == short_chain[0] for r in results.values())
+        assert not [r for r in caplog.records if "fell back to extractive" in r.getMessage()]
+        assert not [r for r in caplog.records if "ZERO LLM summaries" in r.getMessage()]
+
+    def test_empty_paper_list_logs_nothing(self, gemini_provider, caplog) -> None:
+        """`papers and ...` guards against an empty list reporting a total failure."""
+        with caplog.at_level(logging.WARNING):
+            assert gemini_provider.summarize_papers([]) == {}
+        assert not [r for r in caplog.records if "ZERO LLM summaries" in r.getMessage()]

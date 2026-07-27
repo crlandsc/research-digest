@@ -92,6 +92,20 @@ class GeminiProvider(SummarizationProvider):
                     text=extractive_summary(paper.abstract),
                     source="extractive",
                 )
+
+        # A Gemini outage is otherwise silent: every failure degrades to an extractive
+        # summary, so the digest still builds, the email still sends, and the run still
+        # exits 0. Summarize the damage once so it is greppable in the workflow log.
+        fell_back = sum(1 for r in results.values() if r.source == "extractive")
+        if papers and fell_back == len(papers):
+            logger.error(
+                "Gemini produced ZERO LLM summaries; all %d papers fell back to extractive",
+                fell_back,
+            )
+        elif fell_back:
+            logger.warning(
+                "Gemini fell back to extractive for %d/%d papers", fell_back, len(papers)
+            )
         return results
 
     def _call_with_fallback(self, prompt: str) -> SummaryResult:
