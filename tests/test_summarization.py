@@ -13,7 +13,10 @@ from research_digest.summarization.extractive import ExtractiveProvider
 from research_digest.summarization.providers import get_provider
 
 # Distinctive so hygiene tests can assert it never reaches a log record or a URL.
-FAKE_KEY = "AIzaTESTKEY0000000000000000000000000000"
+# Deliberately NOT shaped like a real Google key (no "AIza" prefix): a realistic-looking
+# fixture trips GitHub secret scanning on every push, and nothing here needs the real
+# shape - the assertions only need a distinctive string. Do not "improve" this.
+FAKE_KEY = "NOT-A-REAL-KEY-test-fixture-0000000000"
 
 
 def _paper(**kw) -> Paper:
