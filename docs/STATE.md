@@ -57,6 +57,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-08-04 — Mac Mini self-hosted runner DNS hardened (router DHCP → 1.1.1.1/8.8.8.8 on Ethernet/Wi-Fi/USB LAN; powernap off). Checkout `Could not resolve host: github.com` was intermittent host DNS, not digest code. Verified live digest on `Mac-mini`: https://github.com/crlandsc/research-digest/actions/runs/30958408038 (CHRIS-340)
 2026-07-27 — refreshed the Gemini chain to five GA models (3.6 Flash lead; dropped the 3-flash preview and both 2.5 models, which shut down 2026-10-16), dropped the deprecated `temperature` param, moved the API key from `?key=` to the `x-goog-api-key` header, and added a log line when summaries fall back to extractive (see D-035)
 2026-07-27 — removed the last GitHub `schedule:` cron: `check-models.yml` is now dispatched by a Mondays-only job in `digest.yml`, because GitHub auto-disables scheduled workflows after 60 days of repo inactivity on public repos and had warned this one would be disabled ~2026-07-31 (see D-036)
 2026-06-01 — moved the daily digest off GitHub's `schedule:` cron to an external OS timer calling `gh workflow run digest.yml`, since scheduled events were firing hours late (see D-034)

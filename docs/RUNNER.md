@@ -89,6 +89,30 @@ Do this on the always-on machine (e.g. your Mac Mini). It takes a few minutes.
 
 3. Point the scheduled jobs at it: `scripts/runner.sh local`.
 
+### Host DNS / sleep (macOS self-hosted)
+
+Checkout failures of the form `Could not resolve host: github.com` on an otherwise
+online runner are usually flaky **router/DHCP DNS** (or sleep/Wi-Fi), not a digest bug.
+Prefer Ethernet; set explicit recursive DNS on every active service (not `Empty`/router):
+
+```bash
+sudo networksetup -setdnsservers Ethernet 1.1.1.1 8.8.8.8
+sudo networksetup -setdnsservers Wi-Fi 1.1.1.1 8.8.8.8
+# plus any other active service (e.g. USB LAN)
+sudo dscacheutil -flushcache && sudo killall -HUP mDNSResponder
+```
+
+Keep the box awake for the weekday dispatch window:
+
+```bash
+sudo pmset -a sleep 0 disksleep 0 displaysleep 10 tcpkeepalive 1 powernap 0
+```
+
+Probe as the runner user: `dig github.com +short` and
+`git ls-remote https://github.com/<owner>/research-digest HEAD`. Do not flip
+`AUTOMATION_RUNNER` to GitHub-hosted just to paper over DNS — that reintroduces
+shared-IP arXiv throttling.
+
 ### Runner prerequisites
 
 Jobs run `pip install -e .` and need **Python 3.12** plus `git`.
