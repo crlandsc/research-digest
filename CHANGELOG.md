@@ -2,6 +2,9 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.12 — 2026-09-03
+- Changed: refreshed the Gemini fallback chain Flash pair to `gemini-3.8-flash` (GA 2026-09-02) and `gemini-3.7-flash` (GA 2026-08-13), dropping `gemini-3.6-flash` and `gemini-3.5-flash`. Shape is unchanged: 2 Flash + 2 Lite + Gemma, best-quality-first, all free-tier and `generateContent`-capable. Lite entries and `gemma-4-31b-it` stay (D-035)
+
 ## 0.1.11 — 2026-07-27
 - Changed: refreshed the Gemini fallback chain to five GA models (`gemini-3.6-flash` → `gemini-3.5-flash` → `gemini-3.5-flash-lite` → `gemini-3.1-flash-lite` → `gemma-4-31b-it`), dropping `gemini-3-flash-preview` and both 2.5 models (shutdown 2026-10-16). Chain length 6 → 5, but durable depth improves: the old chain would have fallen to 4 entries in October, this one holds until 2027-05-07. Production logs show the chain buys availability rather than quota (three positions used on 2026-07-24, all failures 503s or timeouts, zero 429s ever), so the ordering now deliberately spans two serving tiers plus one non-Gemini family (D-035)
 - Fixed: dropped the `temperature` sampling param, deprecated by Google on 2026-07-21 alongside `top_p`/`top_k`. Verified against the live API that `gemini-3.6-flash` ignores it outright, so this is a no-op rather than a change in summary style (D-035)

@@ -17,20 +17,20 @@ API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 # Fallback chain ordered by quality, spanning two serving tiers plus one non-Gemini
 # family so that a flash-wide outage cannot take out every entry (see D-035). Each
 # model uses the same generateContent REST API and is free-tier eligible. Verified
-# against ai.google.dev on 2026-07-27.
+# against ai.google.dev on 2026-09-03.
 #
 # Keep the rows below in sync with MODEL_CHAIN; TestModelChainContract enforces it.
 #
 # Model                    Status                   Notes
 # ------------------------ ------------------------ ------------------------------
-# gemini-3.6-flash         GA (2026-07-21)          Best Flash; 2.5-flash successor
-# gemini-3.5-flash         GA (2026-05-19)          No shutdown announced
-# gemini-3.5-flash-lite    GA (2026-07-21)          Lite tier; 3.1-lite successor
+# gemini-3.8-flash         GA (2026-09-02)          Best Flash; 3.6/3.7 successor
+# gemini-3.7-flash         GA (2026-08-13)          No shutdown announced
+# gemini-3.5-flash-lite    GA (2026-07-21)          Lite tier
 # gemini-3.1-flash-lite    GA (2026-05-07)          Earliest shutdown 2027-05-07
 # gemma-4-31b-it           GA (2026-04-02)          Non-Gemini, decorrelated tier
 MODEL_CHAIN = [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemma-4-31b-it",

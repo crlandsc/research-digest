@@ -109,7 +109,7 @@ To get concise, newsletter-style summaries instead of abstract excerpts:
      provider: gemini
    ```
 
-The summarizer uses a 5-model fallback chain (Gemini 3.6 Flash → Gemini 3.5 Flash → Gemini 3.5 Flash Lite → Gemini 3.1 Flash Lite → Gemma 4 31B), ordered by benchmark quality. All models are GA and within Google's free tier, and the chain automatically falls back to the next model if one has an outage or hits rate limits. The ordering deliberately spans two serving tiers plus one non-Gemini family, because in practice outages hit a whole tier at once: when both Flash models returned 503s on the same day, what recovered the run was a Flash Lite model.
+The summarizer uses a 5-model fallback chain (Gemini 3.8 Flash → Gemini 3.7 Flash → Gemini 3.5 Flash Lite → Gemini 3.1 Flash Lite → Gemma 4 31B), ordered by benchmark quality. All models are GA and within Google's free tier, and the chain automatically falls back to the next model if one has an outage or hits rate limits. The ordering deliberately spans two serving tiers plus one non-Gemini family, because in practice outages hit a whole tier at once: when both Flash models returned 503s on the same day, what recovered the run was a Flash Lite model.
 
 #### Keeping the model chain current
 
