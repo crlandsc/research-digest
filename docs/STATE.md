@@ -9,7 +9,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
 - M3: ranking and digest generation (scoring, filters, Markdown renderer)
 - M4: usability hardening (CLI ergonomics, status command, edge case tests)
-- M5: LLM summarization (5-model fallback chain: Gemini 3.6 Flash → 3.5 Flash → 3.5 Flash Lite → 3.1 Flash Lite → Gemma 4 31B; D-035)
+- M5: LLM summarization (5-model fallback chain: Gemini 3.8 Flash → 3.7 Flash → 3.5 Flash Lite → 3.1 Flash Lite → Gemma 4 31B; D-035)
 - M5: model-drift checker (weekly diff of MODEL_CHAIN against live ListModels API, dispatched by the digest; D-030/D-036)
 - M5: email delivery (Gmail SMTP with newsletter-style HTML)
 - M5: topic grouping (papers grouped by keyword category in email)
@@ -57,6 +57,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-09-03 — refreshed the Gemini chain Flash pair to 3.8 Flash and 3.7 Flash, dropping 3.6 Flash and 3.5 Flash; Lite entries and Gemma stay. Chain shape unchanged (2 Flash + 2 Lite + Gemma; D-035)
 2026-08-04 — Mac Mini self-hosted runner DNS hardened (router DHCP → 1.1.1.1/8.8.8.8 on Ethernet/Wi-Fi/USB LAN; powernap off). Checkout `Could not resolve host: github.com` was intermittent host DNS, not digest code. Verified live digest on `Mac-mini`: https://github.com/crlandsc/research-digest/actions/runs/30958408038 (CHRIS-340)
 2026-07-27 — refreshed the Gemini chain to five GA models (3.6 Flash lead; dropped the 3-flash preview and both 2.5 models, which shut down 2026-10-16), dropped the deprecated `temperature` param, moved the API key from `?key=` to the `x-goog-api-key` header, and added a log line when summaries fall back to extractive (see D-035)
 2026-07-27 — removed the last GitHub `schedule:` cron: `check-models.yml` is now dispatched by a Mondays-only job in `digest.yml`, because GitHub auto-disables scheduled workflows after 60 days of repo inactivity on public repos and had warned this one would be disabled ~2026-07-31 (see D-036)

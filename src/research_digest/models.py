@@ -49,7 +49,7 @@ class SummaryResult(BaseModel):
     """Result of a summarization attempt."""
 
     text: str
-    source: str  # model name (e.g. "gemini-3.6-flash") or "extractive"
+    source: str  # model name (e.g. "gemini-3.8-flash") or "extractive"
 
 
 class DigestEntry(BaseModel):
