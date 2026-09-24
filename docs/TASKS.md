@@ -52,6 +52,8 @@ This file is the prioritized build backlog.
 - [x] Add `gemini-3.5-flash` to fallback chain (D-029)
 - [x] Refresh fallback chain Flash pair to `gemini-3.8-flash` / `gemini-3.7-flash` (D-035, 2026-09-03)
 - [x] Add model-drift checker CLI + weekly run (D-030; cron replaced by digest dispatch in D-036)
+- [x] Fail faster on a persistent arXiv 406 so a blocked runner fails loudly instead of timing out (D-037)
+- [ ] Diagnose the Mac Mini's arXiv 406 block, then move scheduled automation back to it (MS-007)
 - [ ] Design source adapters for future music/audio venues (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP)
 
 ## Prioritization rule
