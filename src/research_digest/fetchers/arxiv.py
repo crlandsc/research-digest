@@ -31,6 +31,10 @@ RETRY_BACKOFF_BASE = 30.0
 RETRY_BACKOFF_CAP = 480.0
 RETRY_JITTER = 30.0
 DEFAULT_MAX_RETRIES = 6
+# A 406 is Fastly blocking this client/IP, not load: a couple of quick retries catch a
+# one-off, but a persistent block won't clear with backoff, so hand it to the workflow
+# retry (fresh runner) fast rather than burn the full budget and overrun the job timeout.
+BLOCKED_MAX_RETRIES = 2
 # Random startup jitter desyncs us from other GH Actions cron jobs that fire at :05.
 INITIAL_JITTER_MAX = 10.0
 
@@ -196,6 +200,8 @@ def _request_with_retry(
 
     Retries on: any 5xx, 406 (CDN block), 408 (timeout), 429 (rate limit),
     plus ReadTimeout and ConnectError exceptions.
+    A 406 gets at most BLOCKED_MAX_RETRIES retries: a persistent block won't clear
+    with backoff, so it escalates quickly to the workflow's fresh-runner retry.
     GH Actions shared egress IPs are commonly rate limited by arXiv's Fastly CDN
     and the rate-limit window can persist several minutes, so we backoff
     exponentially up to RETRY_BACKOFF_CAP per attempt and honor Retry-After
@@ -239,7 +245,10 @@ def _request_with_retry(
 
         retryable = _is_retryable_status(response.status_code)
         if retryable:
-            if attempt < max_retries:
+            status_retries = (
+                min(max_retries, BLOCKED_MAX_RETRIES) if response.status_code == 406 else max_retries
+            )
+            if attempt < status_retries:
                 retry_after = response.headers.get("Retry-After")
                 backoff = _compute_backoff(attempt)
                 try:
@@ -262,14 +271,14 @@ def _request_with_retry(
         response.raise_for_status()
         return response
 
-    logger.error("All %d attempts exhausted. Last status: %s", max_retries + 1, last_status)
+    logger.error("All %d attempts exhausted. Last status: %s", attempt + 1, last_status)
     if last_status is not None and _is_retryable_status(last_status):
         raise ArxivTransientError(
-            f"arXiv transient failure (HTTP {last_status}) persisted after {max_retries + 1} attempts. "
+            f"arXiv transient failure (HTTP {last_status}) persisted after {attempt + 1} attempts. "
             "Likely a shared CI egress IP is throttled, or the Fastly/Varnish CDN is overloaded; "
             "retry from a fresh runner."
         )
-    raise RuntimeError(f"arXiv API failed after {max_retries + 1} attempts (last status {last_status})")
+    raise RuntimeError(f"arXiv API failed after {attempt + 1} attempts (last status {last_status})")
 
 
 def parse_arxiv_response(xml_text: str) -> tuple[list[Paper], int]:

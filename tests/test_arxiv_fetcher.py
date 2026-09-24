@@ -8,6 +8,7 @@ import pytest
 
 from research_digest.config import ArxivSourceConfig
 from research_digest.fetchers.arxiv import (
+    BLOCKED_MAX_RETRIES,
     RETRY_BACKOFF_BASE,
     RETRY_BACKOFF_CAP,
     ArxivTransientError,
@@ -345,6 +346,28 @@ class TestRequestWithRetry:
         with pytest.raises(ArxivTransientError):
             _request_with_retry(client, {"q": "x"}, max_retries=2)
         assert client.get.call_count == 3  # max_retries + 1
+
+    def test_retries_on_406_then_succeeds(self) -> None:
+        # A one-off 406 from the CDN (seen on GitHub-hosted runners) still recovers.
+        client = MagicMock()
+        client.get.side_effect = [
+            _mock_response(406, ""),
+            _mock_response(200, "<feed/>"),
+        ]
+        resp = _request_with_retry(client, {"q": "x"}, max_retries=6)
+        assert resp.status_code == 200
+        assert client.get.call_count == 2
+
+    def test_persistent_406_gives_up_early(self) -> None:
+        # A persistent 406 is a CDN block on this client/IP, not a load spike, so
+        # long in-process backoff can't clear it. Regression for 2026-09-18..24: the
+        # full 7-attempt budget per run (x3 workflow attempts) overran the job
+        # timeout, so runs were cancelled silently instead of failing loudly.
+        client = MagicMock()
+        client.get.return_value = _mock_response(406, "")
+        with pytest.raises(ArxivTransientError):
+            _request_with_retry(client, {"q": "x"}, max_retries=6)
+        assert client.get.call_count == BLOCKED_MAX_RETRIES + 1
 
     def test_retries_on_5xx(self) -> None:
         client = MagicMock()
