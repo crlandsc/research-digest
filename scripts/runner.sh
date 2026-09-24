@@ -38,8 +38,12 @@ LABEL="${AUTOMATION_RUNNER_LABEL:-self-hosted}"
 command -v gh >/dev/null 2>&1 || { echo "error: gh (GitHub CLI) not found on PATH." >&2; exit 69; }
 
 current() {
-  # Empty string if the variable is unset (404).
-  gh api "repos/{owner}/{repo}/actions/variables/${VAR}" --jq '.value' 2>/dev/null || true
+  # Empty string if the variable is unset (404). gh prints the error body to stdout on
+  # failure, so only keep the output when the call succeeds.
+  local out
+  if out="$(gh api "repos/{owner}/{repo}/actions/variables/${VAR}" --jq '.value' 2>/dev/null)"; then
+    echo "$out"
+  fi
 }
 
 case "${1:-status}" in

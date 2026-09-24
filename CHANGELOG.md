@@ -2,6 +2,12 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.13 - 2026-09-24
+- Fixed: a persistent arXiv 406 now gets 2 quick in-process retries instead of the full 6-retry backoff, then hands off to the workflow retry as before (exit 75). From 2026-09-18 the self-hosted Mac Mini got a 406 on every request; the full budget (about 27 min per attempt, x3 attempts, plus 90 min of workflow sleeps) overran the 150-min job timeout, so five runs were cancelled with no failure notification. A persistent block now fails the job in about 1.5 hours and sends 9 requests a day instead of 21. A one-off 406, as seen on GitHub-hosted runners in April, still recovers (D-037)
+- Fixed: arXiv give-up messages now report the number of attempts actually made rather than the configured maximum
+- Fixed: `scripts/runner.sh status` printed GitHub's 404 error body as if it were a runner label when `AUTOMATION_RUNNER` was unset. `gh api` writes the error body to stdout, so the output is now kept only on success
+- Changed (config, not code): scheduled automation moved back to GitHub-hosted runners (`AUTOMATION_RUNNER` unset) until the Mac Mini's arXiv block is diagnosed. The Mac Mini's timer still triggers the digest (D-037, MS-007)
+
 ## 0.1.12 — 2026-09-03
 - Changed: refreshed the Gemini fallback chain Flash pair to `gemini-3.8-flash` (GA 2026-09-02) and `gemini-3.7-flash` (GA 2026-08-13), dropping `gemini-3.6-flash` and `gemini-3.5-flash`. Shape is unchanged: 2 Flash + 2 Lite + Gemma, best-quality-first, all free-tier and `generateContent`-capable. Lite entries and `gemma-4-31b-it` stay (D-035)
 

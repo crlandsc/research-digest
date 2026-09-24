@@ -185,6 +185,27 @@ See **`docs/RUNNER.md`** for the full walkthrough. In brief:
 Trigger a manual run and confirm the scheduled job executed on the self-hosted runner
 and the arXiv fetch succeeded without 429/503 retries.
 
+## MS-007 - Diagnose the Mac Mini's arXiv 406 block
+- Status: Open (2026-09-24)
+- Needed for: moving scheduled automation back to the self-hosted Mac Mini (`scripts/runner.sh local`)
+- Trigger: next time you have access to the Mac Mini (or can run an agent there)
+
+### Why human action is required
+The block is specific to the Mac Mini, so it can only be probed from that machine. See D-037 for the evidence.
+
+### Exact steps
+Keep the total under ~10 requests, 5+ s apart. Test URL: `https://export.arxiv.org/api/query?search_query=cat:cs.SD&max_results=1`
+1. curl GET with the default User-Agent, then with `-A "research-digest/0.1.0 (local CLI tool)"`.
+2. The same GET with the runner's `python3.12`, via httpx (throwaway venv) and via `urllib.request`.
+3. Record: public IP, `python3.12 -c "import ssl; print(ssl.OPENSSL_VERSION)"`, `curl --version`, `scutil --proxy`, proxy env vars, any VPN, content filter or network extension.
+
+### What to send back to Claude
+- A table of client, User-Agent and status code (plus the `via` header) for each request
+- The environment details from step 3, and whether the MacBook was on the same network during the 2026-09-24 tests
+
+### Verification
+If every GET gets 406, the block is on the IP (wait it out, get a new IP from the ISP, or ask arXiv to lift it). If only Python gets 406, it's at the client/TLS level (try a different Python/OpenSSL build). Once a GET gets a 200, run `scripts/runner.sh local` and trigger a manual run.
+
 ---
 
 ## Required response template
