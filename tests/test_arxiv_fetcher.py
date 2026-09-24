@@ -8,7 +8,7 @@ import pytest
 
 from research_digest.config import ArxivSourceConfig
 from research_digest.fetchers.arxiv import (
-    BLOCKED_MAX_RETRIES,
+    THROTTLED_MAX_RETRIES,
     RETRY_BACKOFF_BASE,
     RETRY_BACKOFF_CAP,
     ArxivTransientError,
@@ -367,7 +367,25 @@ class TestRequestWithRetry:
         client.get.return_value = _mock_response(406, "")
         with pytest.raises(ArxivTransientError):
             _request_with_retry(client, {"q": "x"}, max_retries=6)
-        assert client.get.call_count == BLOCKED_MAX_RETRIES + 1
+        assert client.get.call_count == THROTTLED_MAX_RETRIES + 1
+
+    def test_persistent_429_gives_up_early(self) -> None:
+        # Hammering a rate limit doesn't clear it and may escalate it: the 9/14-15
+        # storm (18 x 429 per day) was followed by a week-long 406 block. Hand a
+        # persistent 429 to the workflow's 30/60-min cool-down instead.
+        client = MagicMock()
+        client.get.return_value = _mock_response(429, "Rate exceeded.")
+        with pytest.raises(ArxivTransientError):
+            _request_with_retry(client, {"q": "x"}, max_retries=6)
+        assert client.get.call_count == THROTTLED_MAX_RETRIES + 1
+
+    def test_persistent_503_keeps_full_budget(self) -> None:
+        # Overload (5xx) is not a penalty on us, so it keeps the full backoff.
+        client = MagicMock()
+        client.get.return_value = _mock_response(503, "Service Unavailable")
+        with pytest.raises(ArxivTransientError):
+            _request_with_retry(client, {"q": "x"}, max_retries=6)
+        assert client.get.call_count == 7
 
     def test_retries_on_5xx(self) -> None:
         client = MagicMock()

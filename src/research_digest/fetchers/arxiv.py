@@ -31,10 +31,13 @@ RETRY_BACKOFF_BASE = 30.0
 RETRY_BACKOFF_CAP = 480.0
 RETRY_JITTER = 30.0
 DEFAULT_MAX_RETRIES = 6
-# A 406 is Fastly blocking this client/IP, not load: a couple of quick retries catch a
-# one-off, but a persistent block won't clear with backoff, so hand it to the workflow
-# retry (fresh runner) fast rather than burn the full budget and overrun the job timeout.
-BLOCKED_MAX_RETRIES = 2
+# 406 (Fastly block) and 429 (rate limit) are penalties on this client/IP, not load:
+# a couple of quick retries catch a one-off, but hammering a persistent one doesn't
+# clear it and may escalate it (9/14-15's 429 storm was followed by a week-long 406
+# block). Hand it to the workflow retry (30/60-min cool-down, maybe a fresh runner)
+# rather than burn the full budget and overrun the job timeout. 5xx keeps the full budget.
+THROTTLED_STATUSES = (406, 429)
+THROTTLED_MAX_RETRIES = 2
 # Random startup jitter desyncs us from other GH Actions cron jobs that fire at :05.
 INITIAL_JITTER_MAX = 10.0
 
@@ -200,8 +203,9 @@ def _request_with_retry(
 
     Retries on: any 5xx, 406 (CDN block), 408 (timeout), 429 (rate limit),
     plus ReadTimeout and ConnectError exceptions.
-    A 406 gets at most BLOCKED_MAX_RETRIES retries: a persistent block won't clear
-    with backoff, so it escalates quickly to the workflow's fresh-runner retry.
+    A 406 or 429 gets at most THROTTLED_MAX_RETRIES retries: a persistent block or
+    rate limit won't clear with more requests, so it escalates quickly to the
+    workflow's cool-down retry.
     GH Actions shared egress IPs are commonly rate limited by arXiv's Fastly CDN
     and the rate-limit window can persist several minutes, so we backoff
     exponentially up to RETRY_BACKOFF_CAP per attempt and honor Retry-After
@@ -246,7 +250,9 @@ def _request_with_retry(
         retryable = _is_retryable_status(response.status_code)
         if retryable:
             status_retries = (
-                min(max_retries, BLOCKED_MAX_RETRIES) if response.status_code == 406 else max_retries
+                min(max_retries, THROTTLED_MAX_RETRIES)
+                if response.status_code in THROTTLED_STATUSES
+                else max_retries
             )
             if attempt < status_retries:
                 retry_after = response.headers.get("Retry-After")

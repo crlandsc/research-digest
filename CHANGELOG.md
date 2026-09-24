@@ -2,6 +2,9 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.14 - 2026-09-24
+- Changed: a persistent arXiv 429 now gets the same short in-process budget as a 406 (2 retries, then exit 75 and the workflow's 30/60-min cool-down), instead of 6 retries with up to 8-min backoff. The Mac Mini's 9/14-15 retry storm (18 x 429 a day) was followed by a week-long 406 block that expired on its own at about 13:56 EDT on 9/24. A persistent 429 now sends 9 requests a day instead of 21, and fails the job instead of overrunning the timeout. Trade-off: two past runs (7/28, 8/19) that recovered on the 7th in-process request would have waited for the 30-min workflow retry instead. 5xx keeps the full budget. `BLOCKED_MAX_RETRIES` renamed to `THROTTLED_MAX_RETRIES` (D-038)
+
 ## 0.1.13 - 2026-09-24
 - Fixed: a persistent arXiv 406 now gets 2 quick in-process retries instead of the full 6-retry backoff, then hands off to the workflow retry as before (exit 75). From 2026-09-18 the self-hosted Mac Mini got a 406 on every request; the full budget (about 27 min per attempt, x3 attempts, plus 90 min of workflow sleeps) overran the 150-min job timeout, so five runs were cancelled with no failure notification. A persistent block now fails the job in about 1.5 hours and sends 9 requests a day instead of 21. A one-off 406, as seen on GitHub-hosted runners in April, still recovers (D-037)
 - Fixed: arXiv give-up messages now report the number of attempts actually made rather than the configured maximum
