@@ -186,7 +186,7 @@ Trigger a manual run and confirm the scheduled job executed on the self-hosted r
 and the arXiv fetch succeeded without 429/503 retries.
 
 ## MS-007 - Diagnose the Mac Mini's arXiv 406 block
-- Status: Open (2026-09-24)
+- Status: Resolved (2026-09-24). The block expired on its own at about 13:56 EDT, after roughly a week. It was not client/TLS-level: an identical httpx GET from the Mac Mini got 406 at 13:55:55 and 200 at 13:58:25 with nothing changed. The block was keyed on the IP plus some request attribute. Nothing needed changing on the machine. Before routing jobs back with `scripts/runner.sh local`, send one probe first (D-037 corrections, D-038)
 - Needed for: moving scheduled automation back to the self-hosted Mac Mini (`scripts/runner.sh local`)
 - Trigger: next time you have access to the Mac Mini (or can run an agent there)
 
