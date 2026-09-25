@@ -55,7 +55,7 @@ This file is the prioritized build backlog.
 - [x] Fail faster on a persistent arXiv 406 so a blocked runner fails loudly instead of timing out (D-037)
 - [x] Diagnose the Mac Mini's arXiv 406 block (MS-007: penalty expired on its own 2026-09-24)
 - [x] Cut in-process 429 retry volume to reduce the risk of escalating arXiv penalties (D-038)
-- [ ] Move scheduled automation back to the Mac Mini after the 2026-09-25 run checks out (probe first; `scripts/runner.sh local`)
+- [x] Decide where scheduled automation runs after the 2026-09-25 run: stay on GitHub-hosted (D-039)
 - [ ] Design source adapters for future music/audio venues (ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP)
 
 ## Prioritization rule

@@ -242,6 +242,13 @@ This file records decisions that should survive across sessions.
 - Rationale: Both are penalties on the client/IP rather than load, and repeating requests into them doesn't clear them. On the Mac Mini, the 9/14-15 runs sent 18 x 429 a day. The 406 block that followed lasted about a week and lifted on its own at about 13:56 EDT on 9/24 (MS-007). Cause and effect can't be proven from outside, but the retry volume is the one input we control. Run history shows the cost is small: in-process 429 retries recovered on the 2nd request on 9/2 and on the 7th on 7/28 and 8/19. Under this change those last two would wait for the 30-min workflow retry, and 8/3 shows that path recovers on the first request after the cool-down. A persistent 429 now sends 9 requests a day instead of 21 and ends as a failed job (about 1.5 hours) instead of a cancelled one. 5xx is load on arXiv's side and has recovered in-process, so it keeps the longer budget.
 - Known gap: a persistent 5xx can still overrun the 150-min timeout and end as cancelled.
 
+## D-039
+- Date: 2026-09-25
+- Status: Accepted; supersedes the "temporarily" in D-037 (2)
+- Decision: Keep scheduled automation (digest + check-models) on GitHub-hosted runners (`AUTOMATION_RUNNER` unset) as the steady state. The Mac Mini keeps only the launchd timer that dispatches `digest.yml`. Revisit only if arXiv starts throttling GitHub-hosted runners.
+- Rationale: The Mac Mini was chosen (D-032) for its un-shared IP, but that IP is what arXiv blocked for a week (9/18-9/24, MS-007). GitHub-hosted runs start from a fresh VM, and a workflow retry may land on a different IP, which suits the short 406/429 budgets from D-037/D-038. The first scheduled GitHub-hosted run on 2026-09-25 started 7 s after dispatch and got an arXiv 200 on its first request, so the D-034 scheduling delays do not come back: those came from GitHub's `schedule:` cron, not from GitHub-hosted runners. It also removes execution from the Mac Mini, leaving it with one job.
+- Known gap: the Mac Mini's timer is still the only trigger, so if it is asleep or offline no run starts and nothing alerts.
+
 ---
 
 ## Instructions for future updates
