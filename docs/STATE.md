@@ -33,8 +33,8 @@ Milestone 5 — complete. All core features implemented and deployed.
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
 - Schedule: weekdays ~12:00 UTC, fired by an external OS timer calling `gh workflow run digest.yml` (D-034). No GitHub `schedule:` cron
-- Monday: 3-day lookback (covers weekend)
-- Tue-Fri: 1-day lookback
+- Monday: 72-hour lookback (Friday 12:00 UTC through Monday 12:00 UTC when the job runs at 12:00 UTC). Workflow passes lookback 3 (D-040)
+- Tue-Fri: 24-hour lookback. Workflow passes lookback 1 (D-040)
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
 - Runner: both scheduled workflows (digest + check-models) selectable via the `AUTOMATION_RUNNER` repo var — default GitHub-hosted `ubuntu-latest`; set to a self-hosted label to run on an always-on box with an un-throttled IP. Toggle with `scripts/runner.sh {local|github|status}`. CI `tests.yml` always stays GitHub-hosted (fork-PR safety). See `docs/RUNNER.md` + D-032 (escapes the shared-CI-IP throttling that D-031 only softens)
 - **Current runner: GitHub-hosted (decided 2026-09-25, D-039).** `AUTOMATION_RUNNER` is unset. The Mac Mini only runs the launchd timer that dispatches `digest.yml` at 12:00 UTC. Moving execution back is possible (send one probe from the Mac Mini, then `scripts/runner.sh local`) but only worth it if arXiv starts throttling GitHub-hosted runners again
@@ -58,6 +58,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-09-30 - dropped the extra listing-lag day in `compute_date_range` (D-040). Scheduled windows are 24h Tue-Fri and 72h Monday, matching workflow lookback 1 and 3
 2026-09-25 - first scheduled GitHub-hosted run on v0.1.14 succeeded (https://github.com/crlandsc/research-digest/actions/runs/36132454055): dispatched 12:00:06, email at 12:06, arXiv 200 on the first request, all 20 papers summarized. Decided to stay on GitHub-hosted runners (D-039). Gemini 3.8/3.7 Flash still return many 503/429s, so 15 of 20 summaries came from the Lite models
 2026-09-24 - the Mac Mini's 406 block expired on its own at about 13:56 EDT (MS-007 resolved). A persistent 429 now also gets only 3 in-process attempts, since the 9/14-15 retry storm likely escalated into that block (D-038). Corrected D-037: the MacBook probes went through a TLS-intercepting sandbox proxy, and the workflow's curl HEAD check is not a reliable health signal
 2026-09-24 - digests silently missed 9/18-9/24: arXiv's CDN sent the Mac Mini a 406 on every request, and the retry budget overran the job timeout, so runs were cancelled with no failure email. Moved scheduled automation to GitHub-hosted runners (catch-up run succeeded: https://github.com/crlandsc/research-digest/actions/runs/36021616143), limited 406 to 3 in-process attempts, fixed `runner.sh status`. Mac Mini diagnosis is open as MS-007. Separately, that run's Gemini chain returned 503/429/500 on every model, so 19 of 20 summaries fell back to extractive. Not yet investigated

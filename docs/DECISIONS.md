@@ -249,6 +249,12 @@ This file records decisions that should survive across sessions.
 - Rationale: The Mac Mini was chosen (D-032) for its un-shared IP, but that IP is what arXiv blocked for a week (9/18-9/24, MS-007). GitHub-hosted runs start from a fresh VM, and a workflow retry may land on a different IP, which suits the short 406/429 budgets from D-037/D-038. The first scheduled GitHub-hosted run on 2026-09-25 started 7 s after dispatch and got an arXiv 200 on its first request, so the D-034 scheduling delays do not come back: those came from GitHub's `schedule:` cron, not from GitHub-hosted runners. It also removes execution from the Mac Mini, leaving it with one job.
 - Known gap: the Mac Mini's timer is still the only trigger, so if it is asleep or offline no run starts and nothing alerts.
 
+## D-040
+- Date: 2026-09-30
+- Status: Accepted
+- Decision: Drop the listing-lag day so scheduled windows are 24h Tue-Fri and 72h Monday. `compute_date_range` uses `lookback_days` as the window, with no extra day. The workflow still passes 1 (Tue-Fri) and 3 (Monday). `since_last_run`, when passed, stays the start with no added buffer.
+- Rationale: The fetcher added one day on top of the workflow values, so Tuesday-Friday queried 48 hours and Monday 96 hours, and consecutive runs overlapped. The weekday settings already meant 1 day and 3 days. No sent-id list and no since-last-run wiring.
+
 ---
 
 ## Instructions for future updates

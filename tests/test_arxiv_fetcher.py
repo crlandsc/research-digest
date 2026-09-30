@@ -452,9 +452,9 @@ class TestComputeBackoff:
 
 
 class TestComputeDateRange:
-    def test_lookback_with_buffer(self) -> None:
+    def test_lookback_is_exact_days(self) -> None:
         start, end = compute_date_range(7)
-        expected_start = end - timedelta(days=8)  # 7 + 1 buffer
+        expected_start = end - timedelta(days=7)
         assert abs((start - expected_start).total_seconds()) < 1
 
     def test_since_last_run(self) -> None:

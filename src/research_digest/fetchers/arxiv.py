@@ -103,13 +103,13 @@ def compute_date_range(
 ) -> tuple[datetime, datetime]:
     """Compute (start_date, end_date) for a fetch query.
 
-    If since_last_run is provided, uses that as start. Otherwise uses lookback_days + 1 day buffer.
+    If since_last_run is provided, that timestamp is the start and no buffer is added.
+    Otherwise the window is exactly lookback_days, ending at now (UTC).
     """
     end_date = datetime.now(timezone.utc)
     if since_last_run is not None:
         return (since_last_run, end_date)
-    # +1 day buffer for arXiv submission-to-listing lag
-    start_date = end_date - timedelta(days=lookback_days + 1)
+    start_date = end_date - timedelta(days=lookback_days)
     return (start_date, end_date)
 
 

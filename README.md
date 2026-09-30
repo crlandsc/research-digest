@@ -151,7 +151,7 @@ I use GitHub Actions to get this delivered to my inbox every weekday morning aut
    - **Simplest:** uncomment the `schedule:` block at the top of [`digest.yml`](.github/workflows/digest.yml) to use GitHub's built-in cron.
    - **On time:** trigger it from an always-on machine with an OS timer (cron/launchd) running `gh workflow run digest.yml` — see [step 7](#7-run-on-your-own-machine-instead-optional) and [docs/RUNNER.md](docs/RUNNER.md).
 
-   Lookback is automatic — Monday covers the weekend (3-day), Tuesday–Friday the previous day. You can also trigger manually from the Actions tab at any time.
+   Lookback is automatic. Monday is 72 hours (Friday 12:00 UTC through Monday 12:00 UTC when the job runs at 12:00 UTC). Tuesday-Friday is the previous 24 hours. You can also trigger manually from the Actions tab at any time.
 
 **Note:** GitHub Actions `schedule` runs can be delayed 10–60+ minutes (sometimes hours) during high load ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)), and can take a day or two to start running reliably on a new fork. The external-trigger option above avoids this entirely.
 
