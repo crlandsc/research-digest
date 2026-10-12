@@ -51,6 +51,7 @@ This file is the prioritized build backlog.
 - [x] Add LaTeX-to-Unicode conversion for email digest rendering
 - [x] Add `gemini-3.5-flash` to fallback chain (D-029)
 - [x] Refresh fallback chain Flash pair to `gemini-3.8-flash` / `gemini-3.7-flash` (D-035, 2026-09-03)
+- [x] Swap deprecated `gemini-3.7-flash` for `gemini-3.6-flash` at chain position 2 (D-035, 2026-10-12)
 - [x] Add model-drift checker CLI + weekly run (D-030; cron replaced by digest dispatch in D-036)
 - [x] Fail faster on a persistent arXiv 406 so a blocked runner fails loudly instead of timing out (D-037)
 - [x] Diagnose the Mac Mini's arXiv 406 block (MS-007: penalty expired on its own 2026-09-24)

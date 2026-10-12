@@ -9,7 +9,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
 - M3: ranking and digest generation (scoring, filters, Markdown renderer)
 - M4: usability hardening (CLI ergonomics, status command, edge case tests)
-- M5: LLM summarization (5-model fallback chain: Gemini 3.8 Flash → 3.7 Flash → 3.5 Flash Lite → 3.1 Flash Lite → Gemma 4 31B; D-035)
+- M5: LLM summarization (5-model fallback chain: Gemini 3.8 Flash → 3.6 Flash → 3.5 Flash Lite → 3.1 Flash Lite → Gemma 4 31B; D-035)
 - M5: model-drift checker (weekly diff of MODEL_CHAIN against live ListModels API, dispatched by the digest; D-030/D-036)
 - M5: email delivery (Gmail SMTP with newsletter-style HTML)
 - M5: topic grouping (papers grouped by keyword category in email)
@@ -58,6 +58,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-10-12 - swapped deprecated `gemini-3.7-flash` for `gemini-3.6-flash` at chain position 2 (v0.1.15). 3.7 Flash was deprecated 2026-10-08 and now routes to 3.8 Flash, so the slot duplicated position 1. Shape unchanged (D-035)
 2026-09-30 - dropped the extra listing-lag day in `compute_date_range` (D-040). Scheduled windows are 24h Tue-Fri and 72h Monday, matching workflow lookback 1 and 3
 2026-09-25 - first scheduled GitHub-hosted run on v0.1.14 succeeded (https://github.com/crlandsc/research-digest/actions/runs/36132454055): dispatched 12:00:06, email at 12:06, arXiv 200 on the first request, all 20 papers summarized. Decided to stay on GitHub-hosted runners (D-039). Gemini 3.8/3.7 Flash still return many 503/429s, so 15 of 20 summaries came from the Lite models
 2026-09-24 - the Mac Mini's 406 block expired on its own at about 13:56 EDT (MS-007 resolved). A persistent 429 now also gets only 3 in-process attempts, since the 9/14-15 retry storm likely escalated into that block (D-038). Corrected D-037: the MacBook probes went through a TLS-intercepting sandbox proxy, and the workflow's curl HEAD check is not a reliable health signal

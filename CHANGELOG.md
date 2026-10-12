@@ -2,6 +2,9 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.15 - 2026-10-12
+- Changed: swapped deprecated `gemini-3.7-flash` at position 2 for `gemini-3.6-flash`. Google deprecated 3.7 Flash on 2026-10-08 and now auto-routes those requests to `gemini-3.8-flash`, so the slot silently duplicated position 1. `gemini-3.6-flash` is GA (2026-07-21), still listed as stable with no shutdown date announced, and free-tier eligible. `gemini-3.5-flash` was deprecated the same day and is not used. Shape is unchanged: 2 Flash + 2 Lite + Gemma, best-quality-first, all free-tier and `generateContent`-capable (D-035)
+
 ## 0.1.14 - 2026-09-24
 - Changed: a persistent arXiv 429 now gets the same short in-process budget as a 406 (2 retries, then exit 75 and the workflow's 30/60-min cool-down), instead of 6 retries with up to 8-min backoff. The Mac Mini's 9/14-15 retry storm (18 x 429 a day) was followed by a week-long 406 block that expired on its own at about 13:56 EDT on 9/24. A persistent 429 now sends 9 requests a day instead of 21, and fails the job instead of overrunning the timeout. Trade-off: two past runs (7/28, 8/19) that recovered on the 7th in-process request would have waited for the 30-min workflow retry instead. 5xx keeps the full budget. `BLOCKED_MAX_RETRIES` renamed to `THROTTLED_MAX_RETRIES` (D-038)
 
