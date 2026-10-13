@@ -167,7 +167,7 @@ class TestModelChainContract:
         from research_digest.summarization.gemini import MODEL_CHAIN
         assert MODEL_CHAIN == [
             "gemini-3.8-flash",
-            "gemini-3.7-flash",
+            "gemini-3.6-flash",
             "gemini-3.5-flash-lite",
             "gemini-3.1-flash-lite",
             "gemma-4-31b-it",
@@ -178,6 +178,7 @@ class TestModelChainContract:
         retired = {
             "gemini-2.5-flash", "gemini-2.5-flash-lite",
             "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview",
+            "gemini-3.7-flash", "gemini-3.5-flash",
         }
         assert not (set(MODEL_CHAIN) & retired)
 
