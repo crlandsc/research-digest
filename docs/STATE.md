@@ -20,7 +20,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M5: CI workflow (tests run on every push to main)
 - M5: LaTeX-to-Unicode conversion (pylatexenc converts math notation in email titles/summaries)
 - M5: timeout fallback fix (timeouts continue chain instead of skipping to extractive)
-- 230 tests all passing
+- 231 tests all passing
 
 ## Working commands
 - `research-digest run` — full pipeline (fetch + rank + build)
@@ -33,8 +33,8 @@ Milestone 5 — complete. All core features implemented and deployed.
 ## Automated delivery
 - GitHub Actions: `.github/workflows/digest.yml`
 - Schedule: weekdays ~12:00 UTC, fired by an external OS timer calling `gh workflow run digest.yml` (D-034). No GitHub `schedule:` cron
-- Monday: 72-hour lookback (Friday 12:00 UTC through Monday 12:00 UTC when the job runs at 12:00 UTC). Workflow passes lookback 3 (D-040)
-- Tue-Fri: 24-hour lookback. Workflow passes lookback 1 (D-040)
+- Monday: 96-hour lookback (workflow passes lookback 3; `compute_date_range` adds a 1-day listing-lag buffer, D-041)
+- Tue-Fri: 48-hour lookback (workflow passes lookback 1; same buffer, D-041)
 - Secrets: GEMINI_API_KEY, GMAIL_APP_PASSWORD, EMAIL_FROM, EMAIL_TO
 - Runner: both scheduled workflows (digest + check-models) selectable via the `AUTOMATION_RUNNER` repo var — default GitHub-hosted `ubuntu-latest`; set to a self-hosted label to run on an always-on box with an un-throttled IP. Toggle with `scripts/runner.sh {local|github|status}`. CI `tests.yml` always stays GitHub-hosted (fork-PR safety). See `docs/RUNNER.md` + D-032 (escapes the shared-CI-IP throttling that D-031 only softens)
 - **Current runner: GitHub-hosted (decided 2026-09-25, D-039).** `AUTOMATION_RUNNER` is unset. The Mac Mini only runs the launchd timer that dispatches `digest.yml` at 12:00 UTC. Moving execution back is possible (send one probe from the Mac Mini, then `scripts/runner.sh local`) but only worth it if arXiv starts throttling GitHub-hosted runners again
@@ -58,6 +58,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-11-05 - restored the +1 day arXiv listing-lag buffer in `compute_date_range` (v0.1.16, D-041, reversing D-040). Scheduled windows are 48h Tue-Fri and 96h Monday again. Workflow still passes lookback 1 and 3
 2026-10-12 - swapped deprecated `gemini-3.7-flash` for `gemini-3.6-flash` at chain position 2 (v0.1.15). 3.7 Flash was deprecated 2026-10-08 and now routes to 3.8 Flash, so the slot duplicated position 1. Shape unchanged (D-035)
 2026-09-30 - dropped the extra listing-lag day in `compute_date_range` (D-040). Scheduled windows are 24h Tue-Fri and 72h Monday, matching workflow lookback 1 and 3
 2026-09-25 - first scheduled GitHub-hosted run on v0.1.14 succeeded (https://github.com/crlandsc/research-digest/actions/runs/36132454055): dispatched 12:00:06, email at 12:06, arXiv 200 on the first request, all 20 papers summarized. Decided to stay on GitHub-hosted runners (D-039). Gemini 3.8/3.7 Flash still return many 503/429s, so 15 of 20 summaries came from the Lite models

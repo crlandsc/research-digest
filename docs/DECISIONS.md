@@ -251,9 +251,15 @@ This file records decisions that should survive across sessions.
 
 ## D-040
 - Date: 2026-09-30
-- Status: Accepted
+- Status: Superseded by D-041 (listing-lag buffer restored; workflow inputs of 1 and 3 stay)
 - Decision: Drop the listing-lag day so scheduled windows are 24h Tue-Fri and 72h Monday. `compute_date_range` uses `lookback_days` as the window, with no extra day. The workflow still passes 1 (Tue-Fri) and 3 (Monday). `since_last_run`, when passed, stays the start with no added buffer.
 - Rationale: The fetcher added one day on top of the workflow values, so Tuesday-Friday queried 48 hours and Monday 96 hours, and consecutive runs overlapped. The weekday settings already meant 1 day and 3 days. No sent-id list and no since-last-run wiring.
+
+## D-041
+- Date: 2026-11-05
+- Status: Accepted; supersedes the listing-lag buffer removal in D-040
+- Decision: Restore the +1 day listing-lag buffer in `compute_date_range`. The window is `lookback_days + 1`, so the existing workflow inputs (1 Tue-Fri, 3 Monday) query 48h and 96h again. `since_last_run`, when passed, stays the start with no added buffer. Workflow lookback inputs are unchanged.
+- Rationale: D-040 dropped the buffer to stop consecutive-run overlap, which shrank weekday windows from 48h/96h to 24h/72h. arXiv announce and index lag does not line up with `submittedDate` filtering, so weekday digests dropped from about 25 papers to about 2.2 on average, with several zero-paper days (including Nov 4-5). Restoring the buffer recovers coverage. Accepted trade-off: some duplicates between consecutive runs come back. A persistent sent-id cache is out of scope.
 
 ---
 

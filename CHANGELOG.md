@@ -2,6 +2,9 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.16 - 2026-11-05
+- Fixed: restored the +1 day arXiv listing-lag buffer in `compute_date_range`. D-040 dropped it so workflow lookback 1/3 queried 24h/72h; arXiv announce and index lag then missed most papers (weekday digests fell from about 25 to about 2.2, with several empty days). Existing workflow inputs now query 48h Tue-Fri and 96h Monday again. Accepted trade-off: some duplicates between consecutive runs. `since_last_run` still has no buffer (D-041)
+
 ## 0.1.15 - 2026-10-12
 - Changed: swapped deprecated `gemini-3.7-flash` at position 2 for `gemini-3.6-flash`. Google deprecated 3.7 Flash on 2026-10-08 and now auto-routes those requests to `gemini-3.8-flash`, so the slot silently duplicated position 1. `gemini-3.6-flash` is GA (2026-07-21), still listed as stable with no shutdown date announced, and free-tier eligible. `gemini-3.5-flash` was deprecated the same day and is not used. Shape is unchanged: 2 Flash + 2 Lite + Gemma, best-quality-first, all free-tier and `generateContent`-capable (D-035)
 

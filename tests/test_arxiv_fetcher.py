@@ -452,9 +452,14 @@ class TestComputeBackoff:
 
 
 class TestComputeDateRange:
-    def test_lookback_is_exact_days(self) -> None:
-        start, end = compute_date_range(7)
-        expected_start = end - timedelta(days=7)
+    def test_weekday_lookback_is_48h(self) -> None:
+        start, end = compute_date_range(1)
+        expected_start = end - timedelta(days=2)  # lookback 1 + 1 listing-lag buffer
+        assert abs((start - expected_start).total_seconds()) < 1
+
+    def test_monday_lookback_is_96h(self) -> None:
+        start, end = compute_date_range(3)
+        expected_start = end - timedelta(days=4)  # lookback 3 + 1 listing-lag buffer
         assert abs((start - expected_start).total_seconds()) < 1
 
     def test_since_last_run(self) -> None:
