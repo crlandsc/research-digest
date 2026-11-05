@@ -11,6 +11,7 @@ from research_digest.fetchers.arxiv import (
     THROTTLED_MAX_RETRIES,
     RETRY_BACKOFF_BASE,
     RETRY_BACKOFF_CAP,
+    ARXIV_TZ,
     ArxivTransientError,
     _compute_backoff,
     _extract_code_url,
@@ -18,6 +19,7 @@ from research_digest.fetchers.arxiv import (
     _request_with_retry,
     build_query,
     compute_date_range,
+    latest_announced_batch,
     parse_arxiv_response,
 )
 
@@ -451,11 +453,73 @@ class TestComputeBackoff:
         assert _compute_backoff(20) == RETRY_BACKOFF_CAP
 
 
+def _utc(month: int, day: int, hour: int, minute: int = 0) -> datetime:
+    return datetime(2026, month, day, hour, minute, tzinfo=timezone.utc)
+
+
+class TestLatestAnnouncedBatch:
+    """Week of 2026-11-02. US DST ended Sun 2026-11-01, so the 14:00 ET cutoff is
+    18:00 UTC through Fri 10-30 and 19:00 UTC from Mon 11-02."""
+
+    @pytest.mark.parametrize(
+        ("run_at", "expected"),
+        [
+            # Monday: Thu 14:00 - Fri 14:00 ET batch, public Sunday 20:00 ET
+            (_utc(11, 2, 12), (_utc(10, 29, 18), _utc(10, 30, 18))),
+            # Tuesday: weekend batch Fri 14:00 - Mon 14:00 ET, public Monday 20:00 ET
+            (_utc(11, 3, 12), (_utc(10, 30, 18), _utc(11, 2, 19))),
+            (_utc(11, 4, 12), (_utc(11, 2, 19), _utc(11, 3, 19))),
+            (_utc(11, 5, 12), (_utc(11, 3, 19), _utc(11, 4, 19))),
+            (_utc(11, 6, 12), (_utc(11, 4, 19), _utc(11, 5, 19))),
+        ],
+    )
+    def test_scheduled_weekday_runs(self, run_at: datetime, expected: tuple) -> None:
+        assert latest_announced_batch(run_at) == expected
+
+    def test_consecutive_weekday_runs_tile_without_gaps_or_overlap(self) -> None:
+        """Regression for D-040/D-041: rolling windows either skipped or repeated papers."""
+        runs = [
+            _utc(10, 26, 12) + timedelta(days=i)
+            for i in range(19)
+            if (_utc(10, 26, 12) + timedelta(days=i)).weekday() < 5
+        ]
+        windows = [latest_announced_batch(r) for r in runs]
+        for (_, prev_end), (start, end) in zip(windows, windows[1:]):
+            assert start == prev_end
+            assert end > start
+        for start, end in windows:
+            for edge in (start, end):
+                local = edge.astimezone(ARXIV_TZ)
+                assert (local.hour, local.minute, local.weekday() < 5) == (14, 0, True)
+
+    def test_batch_counts_only_after_grace(self) -> None:
+        # Tuesday's batch goes public 20:00 ET Tue; grace ends 00:00 ET Wed (05:00 UTC).
+        assert latest_announced_batch(_utc(11, 4, 4, 59)) == (_utc(10, 30, 18), _utc(11, 2, 19))
+        assert latest_announced_batch(_utc(11, 4, 5)) == (_utc(11, 2, 19), _utc(11, 3, 19))
+
+    def test_weekend_run(self) -> None:
+        # Saturday: Friday's batch isn't public until Sunday night, so Thursday's is newest.
+        assert latest_announced_batch(_utc(11, 7, 12)) == (_utc(11, 4, 19), _utc(11, 5, 19))
+        # Early Monday UTC, after Sunday's grace: Friday's batch.
+        assert latest_announced_batch(_utc(11, 9, 5)) == (_utc(11, 5, 19), _utc(11, 6, 19))
+
+
 class TestComputeDateRange:
-    def test_lookback_is_exact_days(self) -> None:
-        start, end = compute_date_range(7)
-        expected_start = end - timedelta(days=7)
-        assert abs((start - expected_start).total_seconds()) < 1
+    def test_latest_batch(self) -> None:
+        now = _utc(11, 3, 12)
+        assert compute_date_range(1, latest_batch=True, now=now) == latest_announced_batch(now)
+
+    def test_latest_batch_wins_over_since_last_run(self) -> None:
+        now = _utc(11, 3, 12)
+        last = _utc(11, 2, 12)
+        assert compute_date_range(
+            1, since_last_run=last, latest_batch=True, now=now
+        ) == latest_announced_batch(now)
+
+    def test_lookback_ends_at_newest_announced_cutoff(self) -> None:
+        start, end = compute_date_range(3, now=_utc(11, 3, 12))
+        assert end == _utc(11, 2, 19)
+        assert start == end - timedelta(days=3)
 
     def test_since_last_run(self) -> None:
         last = datetime(2024, 1, 10, 12, 0, 0, tzinfo=timezone.utc)

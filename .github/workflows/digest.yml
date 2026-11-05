@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       lookback_days:
-        description: 'Override lookback days (default: auto based on day of week)'
+        description: 'Fetch N days of submissions instead (default: the newest announced arXiv batch)'
         required: false
         type: number
 
@@ -75,20 +75,17 @@ jobs:
           echo "EMAIL_FROM: $([ -n '${{ secrets.EMAIL_FROM }}' ] && echo 'set' || echo 'MISSING')"
           echo "EMAIL_TO: $([ -n '${{ secrets.EMAIL_TO }}' ] && echo 'set' || echo 'MISSING')"
 
-      - name: Determine lookback days
-        id: lookback
+      # Default: the newest arXiv batch that has gone public (Monday gets Friday's batch,
+      # Tuesday gets the weekend batch), so consecutive runs neither overlap nor skip (D-041).
+      - name: Choose fetch window
+        id: window
         run: |
           if [ -n "${{ inputs.lookback_days }}" ]; then
-            echo "days=${{ inputs.lookback_days }}" >> $GITHUB_OUTPUT
+            echo "args=--lookback-days ${{ inputs.lookback_days }}" >> $GITHUB_OUTPUT
           else
-            DOW=$(date -u +%u)
-            if [ "$DOW" = "1" ]; then
-              echo "days=3" >> $GITHUB_OUTPUT
-            else
-              echo "days=1" >> $GITHUB_OUTPUT
-            fi
+            echo "args=--latest-batch" >> $GITHUB_OUTPUT
           fi
-          echo "Lookback days: $(cat $GITHUB_OUTPUT)"
+          echo "Fetch window: $(cat $GITHUB_OUTPUT)"
 
       - name: Run digest pipeline with email
         env:
@@ -96,7 +93,7 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-          LOOKBACK_DAYS: ${{ steps.lookback.outputs.days }}
+          FETCH_WINDOW_ARGS: ${{ steps.window.outputs.args }}
         run: |
           # Workflow-level retry on a transient arXiv failure (CLI exit code 75).
           # arXiv's Fastly/Varnish CDN throttles (429) and overloads (503) shared
@@ -115,8 +112,9 @@ jobs:
               sleep "$wait"
             fi
             echo "::group::digest run attempt $attempt/$max_attempts"
+            # Unquoted on purpose: FETCH_WINDOW_ARGS holds a flag and maybe its value.
             research-digest run \
-              --lookback-days "$LOOKBACK_DAYS" \
+              $FETCH_WINDOW_ARGS \
               --send-email \
               --verbose
             rc=$?

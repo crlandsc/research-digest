@@ -6,8 +6,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from typer.testing import CliRunner
 
+from research_digest.cli import app
 from research_digest.config import AppConfig
+from research_digest.fetchers.arxiv import ARXIV_TZ, latest_announced_batch
 from research_digest.models import Paper
 from research_digest.pipeline import run_pipeline
 from research_digest.pipeline.build_digest import run_build
@@ -79,6 +82,31 @@ class TestFullPipeline:
         assert new2 == 0  # all duplicates
         count = conn.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
         assert count == 6
+
+    def test_latest_batch_reaches_fetcher(self, sample_config: AppConfig, tmp_path: Path) -> None:
+        """--latest-batch must hand the fetcher one arXiv batch, cutoff to cutoff."""
+        with (
+            patch("research_digest.pipeline.fetch.fetch_papers", return_value=[]) as mock_fetch,
+            patch("research_digest.storage.db.get_db_path", return_value=tmp_path / "test.db"),
+        ):
+            run_pipeline(sample_config, latest_batch=True)
+
+        _, start, end = mock_fetch.call_args.args
+        assert timedelta(days=1) <= end - start <= timedelta(days=3, hours=1)
+        assert end <= datetime.now(timezone.utc)
+        for edge in (start, end):
+            local = edge.astimezone(ARXIV_TZ)
+            assert (local.hour, local.minute, local.weekday() < 5) == (14, 0, True)
+
+    def test_cli_latest_batch_dry_run(self) -> None:
+        """The workflow's scheduled path: `--latest-batch` reaches the arXiv query."""
+        config = Path(__file__).parents[1] / "config" / "topics.example.yaml"
+        result = CliRunner().invoke(
+            app, ["fetch", "--dry-run", "--latest-batch", "--config", str(config)]
+        )
+        assert result.exit_code == 0, result.output
+        start, end = latest_announced_batch()
+        assert f"submittedDate:[{start:%Y%m%d%H%M} TO {end:%Y%m%d%H%M}]" in result.output
 
     def test_since_last_run(self, sample_config: AppConfig, _db_and_repo) -> None:
         conn, repo, _ = _db_and_repo

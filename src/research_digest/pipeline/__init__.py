@@ -20,6 +20,7 @@ def run_pipeline(
     since_last_run: bool = False,
     lookback_days_override: int | None = None,
     dry_run: bool = False,
+    latest_batch: bool = False,
 ) -> tuple[Path | None, list[DigestEntry]]:
     """Execute the full pipeline: fetch, rank, build digest.
 
@@ -33,14 +34,16 @@ def run_pipeline(
         from research_digest.fetchers.arxiv import build_query, compute_date_range
 
         lb = lookback_days_override or config.sources.arxiv.lookback_days
-        start, end = compute_date_range(lb)
+        start, end = compute_date_range(lb, latest_batch=latest_batch)
         query = build_query(config.sources.arxiv, start, end)
         logger.info("Dry run — query: %s", query)
         return (None, [])
 
     repo.create_run(run_id)
     try:
-        total, new = run_fetch(config, repo, run_id, since_last_run, lookback_days_override)
+        total, new = run_fetch(
+            config, repo, run_id, since_last_run, lookback_days_override, latest_batch
+        )
         scored = run_rank(config, repo, run_id)
         digest_path, entries = run_build(config, repo, run_id)
 

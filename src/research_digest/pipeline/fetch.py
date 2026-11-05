@@ -15,6 +15,7 @@ def run_fetch(
     run_id: str,
     since_last_run: bool = False,
     lookback_days_override: int | None = None,
+    latest_batch: bool = False,
 ) -> tuple[int, int]:
     """Execute the fetch step.
 
@@ -23,7 +24,7 @@ def run_fetch(
     arxiv_cfg = config.sources.arxiv
     last_run_time = None
 
-    if since_last_run:
+    if since_last_run and not latest_batch:
         last = repo.get_last_successful_run()
         if last and last.completed_at:
             last_run_time = last.completed_at
@@ -32,7 +33,9 @@ def run_fetch(
             logger.info("No previous successful run found, falling back to lookback_days")
 
     lookback = lookback_days_override or arxiv_cfg.lookback_days
-    start_date, end_date = compute_date_range(lookback, since_last_run=last_run_time)
+    start_date, end_date = compute_date_range(
+        lookback, since_last_run=last_run_time, latest_batch=latest_batch
+    )
     logger.info("Fetch date range: %s to %s", start_date.isoformat(), end_date.isoformat())
 
     papers = fetch_papers(arxiv_cfg, start_date, end_date)

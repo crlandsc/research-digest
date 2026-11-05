@@ -2,6 +2,9 @@
 
 Notable changes per release. Rationale lives in [docs/DECISIONS.md](docs/DECISIONS.md).
 
+## 0.1.16 - 2026-11-05
+- Fixed: scheduled digests now fetch exactly the newest arXiv batch that has gone public, instead of a rolling window ending at run time. arXiv closes submissions at 14:00 ET each weekday and publishes each batch at 20:00 ET (Friday's on Sunday), but the query filters on submission time. So rolling windows either missed papers that were not public yet (D-040's 24h/72h: weekday digests fell from about 25 papers to about 2.2) or repeated them (the old +1 day buffer), and Tuesday runs never fetched Friday-evening and Saturday submissions. New `--latest-batch` flag, used by `digest.yml` in place of the day-of-week lookback: Monday gets Thursday-to-Friday submissions, Tuesday the weekend batch, Wednesday-Friday the previous day's. Consecutive runs neither overlap nor skip. `--lookback-days N` now ends at the newest public cutoff instead of now. Still missed: papers held in moderation, holiday-deferred batches (D-041)
+
 ## 0.1.15 - 2026-10-12
 - Changed: swapped deprecated `gemini-3.7-flash` at position 2 for `gemini-3.6-flash`. Google deprecated 3.7 Flash on 2026-10-08 and now auto-routes those requests to `gemini-3.8-flash`, so the slot silently duplicated position 1. `gemini-3.6-flash` is GA (2026-07-21), still listed as stable with no shutdown date announced, and free-tier eligible. `gemini-3.5-flash` was deprecated the same day and is not used. Shape is unchanged: 2 Flash + 2 Lite + Gemma, best-quality-first, all free-tier and `generateContent`-capable (D-035)
 
