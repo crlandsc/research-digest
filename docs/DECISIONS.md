@@ -251,15 +251,16 @@ This file records decisions that should survive across sessions.
 
 ## D-040
 - Date: 2026-09-30
-- Status: Superseded by D-041 (listing-lag buffer restored; workflow inputs of 1 and 3 stay)
+- Status: Superseded by D-041 (fetch windows follow arXiv's batches instead of a rolling window)
 - Decision: Drop the listing-lag day so scheduled windows are 24h Tue-Fri and 72h Monday. `compute_date_range` uses `lookback_days` as the window, with no extra day. The workflow still passes 1 (Tue-Fri) and 3 (Monday). `since_last_run`, when passed, stays the start with no added buffer.
 - Rationale: The fetcher added one day on top of the workflow values, so Tuesday-Friday queried 48 hours and Monday 96 hours, and consecutive runs overlapped. The weekday settings already meant 1 day and 3 days. No sent-id list and no since-last-run wiring.
 
 ## D-041
 - Date: 2026-11-05
-- Status: Accepted; supersedes the listing-lag buffer removal in D-040
-- Decision: Restore the +1 day listing-lag buffer in `compute_date_range`. The window is `lookback_days + 1`, so the existing workflow inputs (1 Tue-Fri, 3 Monday) query 48h and 96h again. `since_last_run`, when passed, stays the start with no added buffer. Workflow lookback inputs are unchanged.
-- Rationale: D-040 dropped the buffer to stop consecutive-run overlap, which shrank weekday windows from 48h/96h to 24h/72h. arXiv announce and index lag does not line up with `submittedDate` filtering, so weekday digests dropped from about 25 papers to about 2.2 on average, with several zero-paper days (including Nov 4-5). Restoring the buffer recovers coverage. Accepted trade-off: some duplicates between consecutive runs come back. A persistent sent-id cache is out of scope.
+- Status: Accepted; supersedes D-040 and the earlier +1 day listing-lag buffer
+- Decision: Scheduled runs fetch exactly the newest arXiv batch that has gone public (`--latest-batch`, `latest_announced_batch` in `fetchers/arxiv.py`). A batch runs from one weekday 14:00 ET submission cutoff to the next. Mon-Thu batches go public at 20:00 ET the same day, Friday's (Thu 14:00 - Fri 14:00) on Sunday at 20:00 ET, and a batch counts as queryable 4 hours after that. `digest.yml` passes `--latest-batch` unless a manual `lookback_days` is given, so the day-of-week lookup is gone. `--lookback-days N` still means N days but ends at the newest public cutoff instead of now. There is no listing-lag buffer. `since_last_run` is unchanged and not cutoff-aligned; the workflow does not use it.
+- Rationale: The query filters on `submittedDate`, but the API only returns a paper once its batch is public, and that lag ranges from about 6 hours to about 3 days depending on the weekday. Every earlier fix picked a rolling window width, and no width works. The +1 day buffer (48h/96h) repeated papers and still never fetched Friday-evening and Saturday submissions: they go public Monday 20:00 ET, after Monday's run, and fall before the start of Tuesday's 48h window. D-040's 24h/72h missed most papers (weekday digests fell from about 25 to about 2.2, with zero-paper days on Nov 4-5). Cutoff-aligned windows tile exactly: each weekday run starts where the previous one ended. Checked live on 2026-11-05 against the cs.SD RSS feed for the Wednesday 20:00 ET batch: the API window returned 9 papers, all in the feed, nothing extra.
+- Known misses: papers held in moderation and published after their batch (the other 2 of the feed's 11 new and cross-listed entries, submitted Nov 2 and Aug 2), batches arXiv defers for a holiday (the deferred day gets skipped), and failed runs (no catch-up). Fetching by publication date (RSS or OAI-PMH) would cover all three; not done until those feeds are checked.
 
 ---
 

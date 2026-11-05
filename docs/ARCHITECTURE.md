@@ -156,10 +156,11 @@ Optional future outputs:
 
 The tool supports two lookback strategies:
 
-1. **N-day lookback** (default for manual runs): fetch papers from the last N days, configurable via `lookback_days` in the topic config.
-2. **Since-last-run** (for automated/scheduled runs): fetch papers published since the last successful fetch, tracked via run history in the database.
+1. **N-day lookback** (default for manual runs): fetch N days of submissions ending at the newest arXiv cutoff that has gone public, configurable via `lookback_days` in the topic config or `--lookback-days`.
+2. **Latest batch** (scheduled runs, `--latest-batch`): fetch exactly the newest arXiv batch that has gone public, from one weekday 14:00 ET submission cutoff to the next. Consecutive weekday runs tile with no overlap and no gaps (D-041).
+3. **Since-last-run** (`--since-last-run`): fetch from the last successful run to now, tracked via run history in the database. Not cutoff-aligned, so it can miss papers published after the run that were submitted before it.
 
-Deduplication at the storage layer prevents overlap regardless of mode. The CLI should accept a flag to select the mode (default: N-day).
+The query filters on submission time, but the arXiv API only returns a paper once its daily batch is public, which is why windows follow arXiv's cutoffs instead of the run time. Deduplication at the storage layer only covers runs that share a database. The scheduled workflow starts each run with a fresh database, so it relies on latest-batch windows not overlapping.
 
 Note: arXiv's experimental REST API may offer better query capabilities in the future. The current implementation uses the stable legacy Atom/XML API. If the REST API matures, evaluate switching — document the decision.
 

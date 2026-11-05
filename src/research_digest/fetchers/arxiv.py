@@ -5,7 +5,8 @@ import random
 import re
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -40,6 +41,18 @@ THROTTLED_STATUSES = (406, 429)
 THROTTLED_MAX_RETRIES = 2
 # Random startup jitter desyncs us from other GH Actions cron jobs that fire at :05.
 INITIAL_JITTER_MAX = 10.0
+
+# arXiv publishes in daily batches (https://info.arxiv.org/help/availability.html), and a
+# paper is invisible to the API until its batch goes public. Submissions close at 14:00
+# US Eastern each weekday. A batch ending at a Mon-Thu cutoff goes public at 20:00 ET the
+# same day; Friday's batch (Thu 14:00 - Fri 14:00) goes public Sunday 20:00 ET. Fetch
+# windows line up with these cutoffs instead of the run time (D-041). Known misses:
+# holiday-deferred batches and papers held in moderation past their batch.
+ARXIV_TZ = ZoneInfo("America/New_York")
+SUBMISSION_CUTOFF_HOUR = 14
+ANNOUNCE_HOUR = 20
+# Margin after 20:00 ET before a batch counts as queryable through the API.
+ANNOUNCE_GRACE = timedelta(hours=4)
 
 
 class ArxivTransientError(RuntimeError):
@@ -97,20 +110,58 @@ def build_query(
     return query
 
 
+def _cutoff(day: date) -> datetime:
+    """The 14:00 ET submission cutoff on a given day."""
+    return datetime(day.year, day.month, day.day, SUBMISSION_CUTOFF_HOUR, tzinfo=ARXIV_TZ)
+
+
+def _announced_at(cutoff_day: date) -> datetime:
+    """When the batch ending at cutoff_day's cutoff goes public (Friday's batch goes out Sunday)."""
+    day = cutoff_day + timedelta(days=2) if cutoff_day.weekday() == 4 else cutoff_day
+    return datetime(day.year, day.month, day.day, ANNOUNCE_HOUR, tzinfo=ARXIV_TZ)
+
+
+def _previous_weekday(day: date) -> date:
+    day -= timedelta(days=1)
+    while day.weekday() >= 5:
+        day -= timedelta(days=1)
+    return day
+
+
+def latest_announced_batch(now: datetime | None = None) -> tuple[datetime, datetime]:
+    """Submission window (UTC) of the newest arXiv batch already public at `now`.
+
+    Consecutive weekday runs get back-to-back batches: no gaps, no overlap.
+    """
+    now = now or datetime.now(timezone.utc)
+    day = now.astimezone(ARXIV_TZ).date()
+    while day.weekday() >= 5 or _announced_at(day) + ANNOUNCE_GRACE > now:
+        day -= timedelta(days=1)
+    start = _cutoff(_previous_weekday(day))
+    return (start.astimezone(timezone.utc), _cutoff(day).astimezone(timezone.utc))
+
+
 def compute_date_range(
     lookback_days: int,
     since_last_run: datetime | None = None,
+    latest_batch: bool = False,
+    now: datetime | None = None,
 ) -> tuple[datetime, datetime]:
-    """Compute (start_date, end_date) for a fetch query.
+    """Compute (start_date, end_date) in UTC for a fetch query.
 
-    If since_last_run is provided, uses that as start. Otherwise uses lookback_days + 1 day buffer.
+    - latest_batch: exactly the newest announced arXiv batch (scheduled runs). Wins over
+      since_last_run.
+    - since_last_run: from that timestamp to now.
+    - otherwise: lookback_days of submissions ending at the newest announced cutoff, so the
+      window only spans papers the API can already return.
     """
-    end_date = datetime.now(timezone.utc)
+    now = now or datetime.now(timezone.utc)
+    if latest_batch:
+        return latest_announced_batch(now)
     if since_last_run is not None:
-        return (since_last_run, end_date)
-    # +1 day buffer for arXiv submission-to-listing lag
-    start_date = end_date - timedelta(days=lookback_days + 1)
-    return (start_date, end_date)
+        return (since_last_run, now)
+    _, end_date = latest_announced_batch(now)
+    return (end_date - timedelta(days=lookback_days), end_date)
 
 
 def fetch_papers(

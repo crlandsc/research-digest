@@ -89,6 +89,9 @@ research-digest fetch --dry-run
 # Override lookback window
 research-digest run --lookback-days 14
 
+# Fetch only the newest published arXiv batch (what the scheduled workflow uses)
+research-digest run --latest-batch
+
 # Check database stats
 research-digest status
 ```
@@ -151,7 +154,7 @@ I use GitHub Actions to get this delivered to my inbox every weekday morning aut
    - **Simplest:** uncomment the `schedule:` block at the top of [`digest.yml`](.github/workflows/digest.yml) to use GitHub's built-in cron.
    - **On time:** trigger it from an always-on machine with an OS timer (cron/launchd) running `gh workflow run digest.yml` — see [step 7](#7-run-on-your-own-machine-instead-optional) and [docs/RUNNER.md](docs/RUNNER.md).
 
-   Lookback is automatic. Monday is 96 hours (lookback 3 plus a 1-day listing-lag buffer). Tuesday-Friday is 48 hours (lookback 1 plus the same buffer). You can also trigger manually from the Actions tab at any time.
+   Lookback is automatic. Each run fetches the newest batch arXiv has published: Monday gets Thursday-to-Friday submissions (published Sunday night), Tuesday gets the weekend's, and Wednesday-Friday get the previous day's. Consecutive runs neither overlap nor skip papers. You can also trigger manually from the Actions tab at any time, optionally with `lookback_days` to fetch N days instead.
 
 **Note:** GitHub Actions `schedule` runs can be delayed 10–60+ minutes (sometimes hours) during high load ([details](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule)), and can take a day or two to start running reliably on a new fork. The external-trigger option above avoids this entirely.
 

@@ -43,7 +43,8 @@ def main(
 def fetch(
     config: Annotated[Path | None, typer.Option("--config", help="Path to topics config YAML.")] = None,
     since_last_run: Annotated[bool, typer.Option("--since-last-run", help="Fetch since last successful run.")] = False,
-    lookback_days: Annotated[int | None, typer.Option("--lookback-days", help="Override lookback days.")] = None,
+    lookback_days: Annotated[int | None, typer.Option("--lookback-days", help="Fetch N days of submissions, ending at the newest announced arXiv cutoff.")] = None,
+    latest_batch: Annotated[bool, typer.Option("--latest-batch", help="Fetch exactly the newest announced arXiv batch (scheduled runs).")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Print query without fetching.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
 ) -> None:
@@ -57,11 +58,11 @@ def fetch(
     if dry_run:
         arxiv_cfg = cfg.sources.arxiv
         lb = lookback_days or arxiv_cfg.lookback_days
-        start, end = compute_date_range(lb)
+        start, end = compute_date_range(lb, latest_batch=latest_batch)
         query = build_query(arxiv_cfg, start, end)
         typer.echo(f"Categories: {', '.join(arxiv_cfg.categories)}")
         typer.echo(f"Keywords:   {len(arxiv_cfg.keyword_queries)} configured")
-        typer.echo(f"Date range: {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}")
+        typer.echo(f"Date range: {start:%Y-%m-%d %H:%M} to {end:%Y-%m-%d %H:%M} UTC")
         typer.echo(f"Query:      {query}")
         return
 
@@ -71,7 +72,7 @@ def fetch(
     repo.create_run(rid)
 
     try:
-        total, new = run_fetch(cfg, repo, rid, since_last_run, lookback_days)
+        total, new = run_fetch(cfg, repo, rid, since_last_run, lookback_days, latest_batch)
         repo.complete_run(rid, status="completed", papers_fetched=total, papers_new=new)
         typer.echo(f"Fetched {total} papers ({new} new)")
     except Exception as e:
@@ -143,7 +144,8 @@ def build(
 def run(
     config: Annotated[Path | None, typer.Option("--config", help="Path to topics config YAML.")] = None,
     since_last_run: Annotated[bool, typer.Option("--since-last-run", help="Fetch since last successful run.")] = False,
-    lookback_days: Annotated[int | None, typer.Option("--lookback-days", help="Override lookback days.")] = None,
+    lookback_days: Annotated[int | None, typer.Option("--lookback-days", help="Fetch N days of submissions, ending at the newest announced arXiv cutoff.")] = None,
+    latest_batch: Annotated[bool, typer.Option("--latest-batch", help="Fetch exactly the newest announced arXiv batch (scheduled runs).")] = False,
     dry_run: Annotated[bool, typer.Option("--dry-run", help="Print query without fetching.")] = False,
     send_email: Annotated[bool, typer.Option("--send-email", help="Send digest via email after build.")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output.")] = False,
@@ -157,7 +159,7 @@ def run(
     from research_digest.fetchers.arxiv import ArxivTransientError
 
     try:
-        path, entries = run_pipeline(cfg, since_last_run, lookback_days, dry_run)
+        path, entries = run_pipeline(cfg, since_last_run, lookback_days, dry_run, latest_batch)
         if path:
             typer.echo(f"Digest written to {path}")
             if send_email:
