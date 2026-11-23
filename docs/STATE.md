@@ -9,7 +9,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - M2: ingest and persistence (arXiv fetcher, SQLite, deduplication)
 - M3: ranking and digest generation (scoring, filters, Markdown renderer)
 - M4: usability hardening (CLI ergonomics, status command, edge case tests)
-- M5: LLM summarization (5-model fallback chain: Gemini 3.8 Flash → 3.6 Flash → 3.5 Flash Lite → 3.1 Flash Lite → Gemma 4 31B; D-035)
+- M5: LLM summarization (5-model fallback chain: Gemini 4 Hydrogen → 3.8 Flash → 3.5 Flash Lite → 3.1 Flash Lite → Gemma 4 31B; D-035)
 - M5: model-drift checker (weekly diff of MODEL_CHAIN against live ListModels API, dispatched by the digest; D-030/D-036)
 - M5: email delivery (Gmail SMTP with newsletter-style HTML)
 - M5: topic grouping (papers grouped by keyword category in email)
@@ -58,6 +58,7 @@ Milestone 5 — complete. All core features implemented and deployed.
 - [ ] Source adapters for ISMIR, TISMIR, DCASE, MIREX, ICASSP, TASLP (deferred)
 
 ## Last updated
+2026-11-23 - put `gemini-4-hydrogen` (GA 2026-11-12) at chain position 1 and dropped `gemini-3.6-flash` (v0.1.17). Shape unchanged (D-035). Neon/Carbon/Argon are paid-tier only; no Gemini 4 Flash-Lite exists
 2026-11-05 - scheduled runs fetch the newest published arXiv batch via `--latest-batch` instead of a rolling 24h/72h window (v0.1.16, D-041, supersedes D-040). Fixes near-empty digests and the Tuesday gap for Friday-evening and Saturday submissions. Known misses: moderation holds, holiday-deferred batches
 2026-10-12 - swapped deprecated `gemini-3.7-flash` for `gemini-3.6-flash` at chain position 2 (v0.1.15). 3.7 Flash was deprecated 2026-10-08 and now routes to 3.8 Flash, so the slot duplicated position 1. Shape unchanged (D-035)
 2026-09-30 - dropped the extra listing-lag day in `compute_date_range` (D-040). Scheduled windows are 24h Tue-Fri and 72h Monday, matching workflow lookback 1 and 3
